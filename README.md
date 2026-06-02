@@ -17,6 +17,7 @@ The app uses these Firestore collections:
 
 - `physics_9702_w25_11` for completed scores.
 - `physics_9702_w25_11_live` for active sessions.
+- `physics_9702_w25_11_participants` for people who started at least one session.
 
 If Firebase is not configured, each browser only sees its own local scores.
 

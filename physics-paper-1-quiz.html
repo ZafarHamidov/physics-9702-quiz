@@ -651,6 +651,10 @@
             <h4>Completed scores</h4>
             <div class="leaderboard-list" id="leaderboardList"></div>
           </div>
+          <div class="leaderboard-section">
+            <h4>Participants</h4>
+            <div class="leaderboard-list" id="participantsList"></div>
+          </div>
         </section>
       </aside>
 
@@ -710,6 +714,7 @@
       api: null,
       collectionName: window.LEADERBOARD_CONFIG?.collectionName || "physics_9702_w25_11",
       liveCollectionName: window.LEADERBOARD_CONFIG?.liveCollectionName || "physics_9702_w25_11_live",
+      participantsCollectionName: window.LEADERBOARD_CONFIG?.participantsCollectionName || "physics_9702_w25_11_participants",
       sessionId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
       liveUnsubscribe: null,
       liveFinished: false,
@@ -753,6 +758,7 @@
       , gradeTargets: document.getElementById("gradeTargets")
       , leaderboardStatus: document.getElementById("leaderboardStatus")
       , leaderboardList: document.getElementById("leaderboardList")
+      , participantsList: document.getElementById("participantsList")
       , refreshLeaderboard: document.getElementById("refreshLeaderboard")
       , liveList: document.getElementById("liveList")
     };
@@ -861,6 +867,13 @@
       };
     }
 
+    function participantSnapshot() {
+      return {
+        ...liveSnapshot(),
+        firstSeen: state.startedAt || Date.now()
+      };
+    }
+
     function rankEntries(entries) {
       return [...entries].sort((a, b) =>
         b.score - a.score ||
@@ -888,6 +901,7 @@
         leaderboard.mode = "local";
         els.leaderboardStatus.textContent = "Local only: other people will not appear until Firebase is configured in leaderboard-config.js.";
         renderLeaderboard(localEntries());
+        renderParticipants(state.startedAt ? [participantSnapshot()] : []);
         return;
       }
       try {
@@ -899,11 +913,34 @@
         leaderboard.mode = "public";
         els.leaderboardStatus.textContent = "Public leaderboard connected. Live and completed scores are shared.";
         await loadLeaderboard();
+        await loadParticipants();
         subscribeLiveSessions();
       } catch {
         leaderboard.mode = "local";
         els.leaderboardStatus.textContent = "Public leaderboard could not connect, using local scores.";
         renderLeaderboard(localEntries());
+        renderParticipants(state.startedAt ? [participantSnapshot()] : []);
+      }
+    }
+
+    async function updateParticipant() {
+      if (!state.startedAt) return;
+      const entry = participantSnapshot();
+      if (leaderboard.mode !== "public") {
+        renderParticipants([entry]);
+        return;
+      }
+      try {
+        await leaderboard.api.setDoc(
+          leaderboard.api.doc(leaderboard.db, leaderboard.participantsCollectionName, leaderboard.sessionId),
+          {
+            ...entry,
+            updatedAt: leaderboard.api.serverTimestamp()
+          },
+          { merge: true }
+        );
+      } catch {
+        renderParticipants([entry]);
       }
     }
 
@@ -1022,6 +1059,19 @@
       }
     }
 
+    async function loadParticipants() {
+      if (leaderboard.mode !== "public" || !leaderboard.db) {
+        renderParticipants(state.startedAt ? [participantSnapshot()] : []);
+        return;
+      }
+      try {
+        const snapshot = await leaderboard.api.getDocs(leaderboard.api.collection(leaderboard.db, leaderboard.participantsCollectionName));
+        renderParticipants(snapshot.docs.map(doc => doc.data()));
+      } catch {
+        renderParticipants(state.startedAt ? [participantSnapshot()] : []);
+      }
+    }
+
     function renderLeaderboard(entries) {
       const ranked = rankEntries(entries);
       els.leaderboardList.innerHTML = "";
@@ -1048,6 +1098,35 @@
         details.append(name, meta);
         row.append(rank, details, score);
         els.leaderboardList.appendChild(row);
+      });
+    }
+
+    function renderParticipants(entries) {
+      const ranked = rankEntries(entries);
+      els.participantsList.innerHTML = "";
+      if (!ranked.length) {
+        const empty = document.createElement("div");
+        empty.className = "leaderboard-status";
+        empty.textContent = "No participants yet.";
+        els.participantsList.appendChild(empty);
+        return;
+      }
+      ranked.forEach((entry, index) => {
+        const row = document.createElement("div");
+        row.className = "leaderboard-row";
+        const rank = document.createElement("div");
+        const details = document.createElement("div");
+        const name = document.createElement("strong");
+        const meta = document.createElement("span");
+        const score = document.createElement("div");
+        rank.textContent = index + 1;
+        name.textContent = entry.name || "Anonymous";
+        meta.textContent = `${entry.finished ? "Finished" : "Started"} | Q${entry.currentQuestion || 1} | ${formatTime(entry.totalTime || 0)}`;
+        score.className = "leaderboard-score";
+        score.textContent = `${entry.score || 0}/40`;
+        details.append(name, meta);
+        row.append(rank, details, score);
+        els.participantsList.appendChild(row);
       });
     }
 
@@ -1235,6 +1314,7 @@
       renderTimers();
       renderSummary();
       updateLiveSession();
+      updateParticipant();
       saveProgress();
     }
 
@@ -1282,6 +1362,7 @@
       renderTimers();
       renderLeaderboard(localEntries());
       renderLiveSessions([]);
+      renderParticipants([]);
     });
 
     els.playerName.value = localStorage.getItem("physics9702PlayerName") || "";
@@ -1320,6 +1401,7 @@
       els.startScreen.style.display = "none";
       render();
       updateLiveSession();
+      updateParticipant();
     }
 
     els.startTest.addEventListener("click", () => {
@@ -1336,6 +1418,7 @@
 
     els.refreshLeaderboard.addEventListener("click", () => {
       loadLeaderboard();
+      loadParticipants();
       if (state.startedAt) updateLiveSession();
       if (leaderboard.mode !== "public") renderLiveSessions(state.startedAt ? [liveSnapshot()] : []);
     });
@@ -1344,6 +1427,7 @@
       renderTimers();
       renderSummary();
       updateLiveSession();
+      updateParticipant();
       saveProgress();
     }, 1000);
 
@@ -1356,6 +1440,7 @@
     renderScore();
     renderTimers();
     renderLiveSessions([]);
+    renderParticipants([]);
     savedProgressAvailable = loadProgress();
     els.resumeNote.classList.toggle("visible", savedProgressAvailable);
     els.startTest.textContent = savedProgressAvailable ? "Continue saved test" : "Start test";
