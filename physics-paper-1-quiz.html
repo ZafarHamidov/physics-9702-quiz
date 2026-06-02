@@ -176,6 +176,16 @@
       padding: 0 18px 14px;
     }
 
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     .progress-track {
       height: 10px;
       overflow: hidden;
@@ -590,6 +600,10 @@
       <div class="stat"><span>Avg. solved time</span><strong id="avgTime">00:00</strong></div>
     </div>
     <div class="progress">
+      <div class="progress-label">
+        <span>Exam time elapsed</span>
+        <span id="timeBarLabel">00:00 / 75:00</span>
+      </div>
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     </div>
   </header>
@@ -770,6 +784,7 @@
       , totalAttempts: document.getElementById("totalAttempts")
       , avgTime: document.getElementById("avgTime")
       , progressFill: document.getElementById("progressFill")
+      , timeBarLabel: document.getElementById("timeBarLabel")
       , summary: document.getElementById("summary")
       , summaryTotal: document.getElementById("summaryTotal")
       , summaryTimeLeft: document.getElementById("summaryTimeLeft")
@@ -1268,6 +1283,9 @@
         els.timeLeft.textContent = "75:00";
         els.timeLeft.style.color = "";
         els.questionTime.textContent = "00:00";
+        els.progressFill.style.width = "0%";
+        els.progressFill.classList.remove("overtime");
+        els.timeBarLabel.textContent = "00:00 / 75:00";
         return;
       }
       const startedAt = state.startedAt || Date.now();
@@ -1279,6 +1297,7 @@
       els.timeLeft.style.color = remaining >= 0 ? "" : "var(--bad)";
       els.progressFill.style.width = `${Math.min(100, (elapsed / examDurationMs) * 100)}%`;
       els.progressFill.classList.toggle("overtime", remaining < 0);
+      els.timeBarLabel.textContent = `${formatTime(elapsed)} / 75:00`;
       const questionStart = state.questionStartedAt[state.current] || now;
       const solvedTime = state.timeSpent[state.current];
       els.questionTime.textContent = formatTime(solvedTime ?? (Date.now() - questionStart));
