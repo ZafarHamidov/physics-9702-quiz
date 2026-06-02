@@ -806,6 +806,7 @@
         finishedAt: state.finishedAt,
         submitted: leaderboard.submitted,
         liveFinished: leaderboard.liveFinished,
+        sessionId: leaderboard.sessionId,
         name: els.playerName.value
       }));
     }
@@ -821,6 +822,7 @@
         state.timeSpent = saved.timeSpent || {};
         state.startedAt = Number(saved.startedAt) || Date.now();
         state.finishedAt = saved.finishedAt ? Number(saved.finishedAt) : null;
+        if (saved.sessionId) leaderboard.sessionId = saved.sessionId;
         leaderboard.submitted = Boolean(saved.submitted);
         leaderboard.liveFinished = Boolean(saved.liveFinished);
         if (saved.name) {
@@ -1354,6 +1356,7 @@
       state.finishedAt = null;
       leaderboard.submitted = false;
       leaderboard.liveFinished = false;
+      leaderboard.sessionId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
       saveProgress();
       document.body.classList.add("prestart");
       els.startScreen.style.display = "";
@@ -1384,6 +1387,7 @@
       if (forceFresh || !savedProgressAvailable) {
         localStorage.removeItem(progressKey);
         savedProgressAvailable = false;
+        leaderboard.sessionId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
         state.startedAt = Date.now();
         state.current = 1;
         state.attempts = {};
