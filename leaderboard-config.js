@@ -2,6 +2,7 @@ window.LEADERBOARD_CONFIG = {
   collectionName: "physics_9702_w25_11",
   liveCollectionName: "physics_9702_w25_11_live",
   participantsCollectionName: "physics_9702_w25_11_participants",
+  mailCollectionName: "mail",
   firebaseConfig: {
     apiKey: "AIzaSyBjxlp6QlgiIDVBCQ0V6JGAL8eTlYwSoRE",
     authDomain: "physics-9702-quiz.firebaseapp.com",

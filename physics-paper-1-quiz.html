@@ -904,6 +904,7 @@
       collectionName: window.LEADERBOARD_CONFIG?.collectionName || "physics_9702_w25_11",
       liveCollectionName: window.LEADERBOARD_CONFIG?.liveCollectionName || "physics_9702_w25_11_live",
       participantsCollectionName: window.LEADERBOARD_CONFIG?.participantsCollectionName || "physics_9702_w25_11_participants",
+      mailCollectionName: window.LEADERBOARD_CONFIG?.mailCollectionName || "mail",
       sessionId: currentSessionId(),
       liveUnsubscribe: null,
       liveFinished: false,
@@ -1136,15 +1137,49 @@
       ].join("\n");
     }
 
-    function emailResults() {
+    function resultEmailHtml() {
+      const body = resultEmailBody()
+        .split("\n")
+        .map(line => line ? line.replace(/[&<>"']/g, char => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "\"": "&quot;",
+          "'": "&#039;"
+        }[char])) : "&nbsp;")
+        .join("<br>");
+      return `<p>${body}</p>`;
+    }
+
+    async function emailResults() {
       const email = els.resultEmail.value.trim();
       if (!email) {
         els.resultEmail.focus();
         return;
       }
-      const subject = encodeURIComponent("Physics 9702/11 Quiz Results");
-      const body = encodeURIComponent(resultEmailBody());
-      window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+      els.emailResults.disabled = true;
+      els.emailResults.textContent = "Sending...";
+      try {
+        if (leaderboard.mode !== "public" || !leaderboard.db) {
+          throw new Error("Email service is not connected yet.");
+        }
+        await leaderboard.api.addDoc(leaderboard.api.collection(leaderboard.db, leaderboard.mailCollectionName), {
+          to: email,
+          message: {
+            subject: "Physics 9702/11 Quiz Results",
+            text: resultEmailBody(),
+            html: resultEmailHtml()
+          },
+          createdAt: leaderboard.api.serverTimestamp()
+        });
+        els.emailResults.textContent = "Sent";
+      } catch {
+        els.emailResults.textContent = "Email unavailable";
+        setTimeout(() => {
+          els.emailResults.disabled = false;
+          els.emailResults.textContent = "Email results";
+        }, 2000);
+      }
     }
 
     function liveSnapshot() {

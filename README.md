@@ -18,8 +18,26 @@ The app uses these Firestore collections:
 - `physics_9702_w25_11` for completed scores.
 - `physics_9702_w25_11_live` for active sessions.
 - `physics_9702_w25_11_participants` for people who started at least one session.
+- `mail` for email result requests, used by the Firebase Trigger Email extension.
 
 If Firebase is not configured, each browser only sees its own local scores.
+
+## Email results
+
+To send results by email, install the official Firebase extension **Trigger Email from Firestore** and configure it to listen to the `mail` collection. The quiz writes documents shaped like:
+
+```js
+{
+  to: "student@example.com",
+  message: {
+    subject: "Physics 9702/11 Quiz Results",
+    text: "...",
+    html: "..."
+  }
+}
+```
+
+Official docs: https://firebase.google.com/docs/extensions/official/firestore-send-email
 
 ## GitHub Pages
 
