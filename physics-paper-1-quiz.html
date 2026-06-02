@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>9702/11 Paper 1 Quiz</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1c2630;
+      --muted: #5f6d7b;
+      --line: #d9e0e7;
+      --panel: #ffffff;
+      --soft: #f4f7fb;
+      --accent: #0f766e;
+      --accent-2: #2f5f9f;
+      --good: #137a3a;
+      --bad: #b42318;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--soft);
+      color: var(--ink);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(10px);
+    }
+
+    .bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 14px 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .score {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .score strong { color: var(--ink); }
+
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 18px 14px;
+    }
+
+    .stat {
+      min-height: 58px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .progress {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 18px 14px;
+    }
+
+    .progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e3e8ef;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 220ms ease;
+    }
+
+    main {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card, .paper, .grid-panel, .leaderboard {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .card {
+      position: sticky;
+      top: 78px;
+      padding: 18px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: 8px 0 10px;
+      font-size: 26px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .hint {
+      min-height: 44px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: var(--accent-2); }
+    button:disabled { cursor: default; opacity: 0.95; }
+    button.correct { border-color: var(--good); background: #eaf8ef; color: var(--good); }
+    button.wrong { border-color: var(--bad); background: #fff1f0; color: var(--bad); }
+
+    .feedback {
+      min-height: 48px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f7f9fc;
+      border: 1px solid var(--line);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .feedback.good { background: #eaf8ef; border-color: #a8dec0; color: var(--good); }
+    .feedback.bad { background: #fff1f0; border-color: #f3aaa5; color: var(--bad); }
+
+    .nav {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .nav button {
+      background: #1c2630;
+      color: #fff;
+      border-color: #1c2630;
+    }
+
+    .nav button:disabled {
+      background: #e7ebef;
+      color: #8290a0;
+      border-color: #e7ebef;
+    }
+
+    .grid-panel {
+      margin-top: 14px;
+      padding: 12px;
+    }
+
+    .question-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+    }
+
+    .question-grid button {
+      min-height: 32px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .question-grid button.active { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+    .question-grid button.done { background: #e8f3f1; border-color: #9ccac4; color: #0f766e; }
+
+    .summary {
+      display: none;
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .summary.visible { display: block; }
+
+    .summary h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .summary-item {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .summary-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .summary-item strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 16px;
+    }
+
+    .player-form {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .leaderboard {
+      margin-top: 14px;
+      padding: 14px;
+    }
+
+    .leaderboard h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .leaderboard-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .leaderboard-head button {
+      min-height: 34px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .leaderboard-status {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .leaderboard-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .leaderboard-row {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+      font-size: 13px;
+    }
+
+    .leaderboard-row strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .leaderboard-row span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .leaderboard-score {
+      text-align: right;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .paper {
+      overflow: hidden;
+      min-height: 70vh;
+    }
+
+    .paper-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .page-wrap {
+      padding: 12px;
+      background: #e9eef5;
+    }
+
+    .page-wrap img {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0 auto;
+      border: 1px solid #cbd4df;
+      background: white;
+    }
+
+    @media (max-width: 900px) {
+      .bar, .layout { grid-template-columns: 1fr; }
+      .stats-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .score { justify-content: flex-start; }
+      .card { position: static; padding: 14px; }
+      main { padding: 12px; }
+      .question-grid { grid-template-columns: repeat(10, 1fr); }
+      .paper { min-height: auto; }
+    }
+
+    @media (max-width: 560px) {
+      header { position: static; }
+      .bar { padding: 12px; }
+      .options { grid-template-columns: 1fr; }
+      .stats-strip, .progress { padding-left: 12px; padding-right: 12px; }
+      .question-grid { grid-template-columns: repeat(5, 1fr); }
+      .summary-grid { grid-template-columns: 1fr; }
+      .page-wrap { padding: 6px; }
+      .paper-head { flex-direction: column; padding: 10px; }
+      .leaderboard-row { grid-template-columns: 24px minmax(0, 1fr); }
+      .leaderboard-score { grid-column: 2; text-align: left; }
+      h2 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div>
+        <h1>CAIE Physics 9702/11 October/November 2025</h1>
+        <div class="meta">Solve one MCQ at a time. Choose A-D and the answer appears immediately.</div>
+      </div>
+      <div class="score">Answered <strong id="answered">0</strong>/40 <span>|</span> Score <strong id="score">0</strong></div>
+    </div>
+    <div class="stats-strip">
+      <div class="stat"><span>Total time</span><strong id="totalTime">00:00</strong></div>
+      <div class="stat"><span>This question</span><strong id="questionTime">00:00</strong></div>
+      <div class="stat"><span>Accuracy</span><strong id="accuracy">0%</strong></div>
+      <div class="stat"><span>Total attempts</span><strong id="totalAttempts">0</strong></div>
+      <div class="stat"><span>Avg. solved time</span><strong id="avgTime">00:00</strong></div>
+    </div>
+    <div class="progress">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <aside>
+        <section class="card">
+          <div class="eyebrow">Question Card</div>
+          <h2 id="questionTitle">Question 1</h2>
+          <div class="player-form">
+            <label for="playerName">Leaderboard name</label>
+            <input id="playerName" maxlength="24" placeholder="Your name">
+          </div>
+          <p class="hint" id="hint">Read the matching question on the paper page, then pick your answer.</p>
+          <div class="options" id="options"></div>
+          <div class="feedback" id="feedback">Your result will show here as soon as you answer.</div>
+          <div class="nav">
+            <button id="prev">Previous</button>
+            <button id="next">Next</button>
+          </div>
+        </section>
+        <section class="grid-panel">
+          <div class="question-grid" id="questionGrid"></div>
+        </section>
+        <section class="summary" id="summary">
+          <h3>End statistics</h3>
+          <div class="summary-grid">
+            <div class="summary-item"><span>Total time</span><strong id="summaryTotal">00:00</strong></div>
+            <div class="summary-item"><span>Final accuracy</span><strong id="summaryAccuracy">0%</strong></div>
+            <div class="summary-item"><span>Total attempts</span><strong id="summaryAttempts">0</strong></div>
+            <div class="summary-item"><span>Average attempts</span><strong id="summaryAvgAttempts">0.0</strong></div>
+            <div class="summary-item"><span>Fastest solved</span><strong id="summaryFastest">--</strong></div>
+            <div class="summary-item"><span>Slowest solved</span><strong id="summarySlowest">--</strong></div>
+          </div>
+        </section>
+        <section class="leaderboard">
+          <div class="leaderboard-head">
+            <h3>Leaderboard</h3>
+            <button id="refreshLeaderboard">Refresh</button>
+          </div>
+          <div class="leaderboard-status" id="leaderboardStatus">Local leaderboard. Add Firebase config to make it public.</div>
+          <div class="leaderboard-list" id="leaderboardList"></div>
+        </section>
+      </aside>
+
+      <section class="paper">
+        <div class="paper-head">
+          <span id="pageLabel">Paper page 3</span>
+          <span id="rangeLabel">Questions 1-4</span>
+        </div>
+        <div class="page-wrap">
+          <img id="paperPage" src="quiz_assets/page-03.png" alt="Rendered question paper page">
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="leaderboard-config.js"></script>
+  <script type="module">
+    const answers = {
+      1: "D", 2: "D", 3: "B", 4: "C", 5: "D", 6: "D", 7: "B", 8: "C",
+      9: "C", 10: "D", 11: "A", 12: "A", 13: "B", 14: "C", 15: "C", 16: "B",
+      17: "B", 18: "C", 19: "A", 20: "A", 21: "D", 22: "B", 23: "C", 24: "A",
+      25: "B", 26: "B", 27: "D", 28: "C", 29: "D", 30: "A", 31: "D", 32: "C",
+      33: "A", 34: "A", 35: "D", 36: "D", 37: "C", 38: "A", 39: "A", 40: "B"
+    };
+
+    const pages = [
+      { page: 3, from: 1, to: 4 }, { page: 4, from: 5, to: 6 }, { page: 5, from: 7, to: 7 },
+      { page: 6, from: 8, to: 10 }, { page: 7, from: 11, to: 13 }, { page: 8, from: 14, to: 17 },
+      { page: 9, from: 18, to: 19 }, { page: 10, from: 20, to: 22 }, { page: 11, from: 23, to: 24 },
+      { page: 12, from: 25, to: 27 }, { page: 13, from: 28, to: 31 }, { page: 14, from: 32, to: 33 },
+      { page: 15, from: 34, to: 35 }, { page: 16, from: 36, to: 38 }, { page: 17, from: 39, to: 40 }
+    ];
+
+    const state = {
+      current: 1,
+      attempts: {},
+      solvedAt: {},
+      questionStartedAt: {},
+      timeSpent: {},
+      advanceTimer: null,
+      startedAt: Date.now(),
+      finishedAt: null
+    };
+    const leaderboard = {
+      mode: "local",
+      db: null,
+      api: null,
+      collectionName: window.LEADERBOARD_CONFIG?.collectionName || "physics_9702_w25_11",
+      submitted: false
+    };
+    const els = {
+      title: document.getElementById("questionTitle"),
+      hint: document.getElementById("hint"),
+      options: document.getElementById("options"),
+      feedback: document.getElementById("feedback"),
+      prev: document.getElementById("prev"),
+      next: document.getElementById("next"),
+      grid: document.getElementById("questionGrid"),
+      page: document.getElementById("paperPage"),
+      pageLabel: document.getElementById("pageLabel"),
+      rangeLabel: document.getElementById("rangeLabel"),
+      answered: document.getElementById("answered"),
+      score: document.getElementById("score")
+      , playerName: document.getElementById("playerName")
+      , totalTime: document.getElementById("totalTime")
+      , questionTime: document.getElementById("questionTime")
+      , accuracy: document.getElementById("accuracy")
+      , totalAttempts: document.getElementById("totalAttempts")
+      , avgTime: document.getElementById("avgTime")
+      , progressFill: document.getElementById("progressFill")
+      , summary: document.getElementById("summary")
+      , summaryTotal: document.getElementById("summaryTotal")
+      , summaryAccuracy: document.getElementById("summaryAccuracy")
+      , summaryAttempts: document.getElementById("summaryAttempts")
+      , summaryAvgAttempts: document.getElementById("summaryAvgAttempts")
+      , summaryFastest: document.getElementById("summaryFastest")
+      , summarySlowest: document.getElementById("summarySlowest")
+      , leaderboardStatus: document.getElementById("leaderboardStatus")
+      , leaderboardList: document.getElementById("leaderboardList")
+      , refreshLeaderboard: document.getElementById("refreshLeaderboard")
+    };
+
+    function formatTime(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function enterQuestion(question) {
+      if (!state.questionStartedAt[question]) state.questionStartedAt[question] = Date.now();
+    }
+
+    function solvedQuestions() {
+      return Object.entries(state.attempts)
+        .filter(([q, choices]) => choices.includes(answers[q]))
+        .map(([q]) => Number(q));
+    }
+
+    function cleanName(name) {
+      return (name || "Anonymous").trim().replace(/\s+/g, " ").slice(0, 24) || "Anonymous";
+    }
+
+    function scoreSnapshot() {
+      const correctCount = solvedQuestions().length;
+      const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
+      const totalTime = (state.finishedAt || Date.now()) - state.startedAt;
+      const solvedTimes = Object.values(state.timeSpent);
+      const avgTime = solvedTimes.length
+        ? solvedTimes.reduce((sum, time) => sum + time, 0) / solvedTimes.length
+        : 0;
+      return {
+        name: cleanName(els.playerName.value),
+        score: correctCount,
+        accuracy: Math.round((correctCount / 40) * 100),
+        totalAttempts,
+        avgAttempts: correctCount ? totalAttempts / correctCount : 0,
+        totalTime,
+        avgTime,
+        completed: correctCount === 40,
+        date: new Date().toISOString()
+      };
+    }
+
+    function rankEntries(entries) {
+      return [...entries].sort((a, b) =>
+        b.score - a.score ||
+        a.totalTime - b.totalTime ||
+        a.totalAttempts - b.totalAttempts ||
+        (a.name || "").localeCompare(b.name || "")
+      ).slice(0, 10);
+    }
+
+    function localEntries() {
+      try {
+        return JSON.parse(localStorage.getItem("physics9702Leaderboard") || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function saveLocalEntry(entry) {
+      localStorage.setItem("physics9702Leaderboard", JSON.stringify(rankEntries([...localEntries(), entry])));
+    }
+
+    async function initLeaderboard() {
+      const config = window.LEADERBOARD_CONFIG?.firebaseConfig;
+      if (!config?.apiKey || !config?.projectId) {
+        leaderboard.mode = "local";
+        els.leaderboardStatus.textContent = "Local leaderboard. Add Firebase config to make it public for friends.";
+        renderLeaderboard(localEntries());
+        return;
+      }
+      try {
+        const firebaseApp = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+        const firestore = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+        leaderboard.api = { ...firebaseApp, ...firestore };
+        const app = leaderboard.api.initializeApp(config);
+        leaderboard.db = leaderboard.api.getFirestore(app);
+        leaderboard.mode = "public";
+        els.leaderboardStatus.textContent = "Public leaderboard connected.";
+        await loadLeaderboard();
+      } catch {
+        leaderboard.mode = "local";
+        els.leaderboardStatus.textContent = "Public leaderboard could not connect, using local scores.";
+        renderLeaderboard(localEntries());
+      }
+    }
+
+    async function submitLeaderboard() {
+      if (leaderboard.submitted || solvedQuestions().length !== 40) return;
+      leaderboard.submitted = true;
+      const entry = scoreSnapshot();
+      saveLocalEntry(entry);
+      if (leaderboard.mode === "public" && leaderboard.db) {
+        try {
+          await leaderboard.api.addDoc(leaderboard.api.collection(leaderboard.db, leaderboard.collectionName), {
+            ...entry,
+            createdAt: leaderboard.api.serverTimestamp()
+          });
+          els.leaderboardStatus.textContent = "Score submitted to the public leaderboard.";
+        } catch {
+          els.leaderboardStatus.textContent = "Public submit failed, but your score was saved locally.";
+        }
+      }
+      await loadLeaderboard();
+    }
+
+    async function loadLeaderboard() {
+      if (leaderboard.mode !== "public" || !leaderboard.db) {
+        renderLeaderboard(localEntries());
+        return;
+      }
+      try {
+        const snapshot = await leaderboard.api.getDocs(leaderboard.api.collection(leaderboard.db, leaderboard.collectionName));
+        renderLeaderboard(snapshot.docs.map(doc => doc.data()));
+      } catch {
+        els.leaderboardStatus.textContent = "Leaderboard read failed. Showing local scores.";
+        renderLeaderboard(localEntries());
+      }
+    }
+
+    function renderLeaderboard(entries) {
+      const ranked = rankEntries(entries);
+      els.leaderboardList.innerHTML = "";
+      if (!ranked.length) {
+        const empty = document.createElement("div");
+        empty.className = "leaderboard-status";
+        empty.textContent = "No scores yet.";
+        els.leaderboardList.appendChild(empty);
+        return;
+      }
+      ranked.forEach((entry, index) => {
+        const row = document.createElement("div");
+        row.className = "leaderboard-row";
+        const rank = document.createElement("div");
+        const details = document.createElement("div");
+        const name = document.createElement("strong");
+        const meta = document.createElement("span");
+        const score = document.createElement("div");
+        rank.textContent = index + 1;
+        name.textContent = entry.name || "Anonymous";
+        meta.textContent = `${formatTime(entry.totalTime)} | ${entry.totalAttempts} attempts | ${Math.round(entry.accuracy || 0)}%`;
+        score.className = "leaderboard-score";
+        score.textContent = `${entry.score}/40`;
+        details.append(name, meta);
+        row.append(rank, details, score);
+        els.leaderboardList.appendChild(row);
+      });
+    }
+
+    function pageFor(question) {
+      return pages.find(item => question >= item.from && question <= item.to);
+    }
+
+    function renderGrid() {
+      els.grid.innerHTML = "";
+      for (let i = 1; i <= 40; i++) {
+        const button = document.createElement("button");
+        button.textContent = i;
+        button.className = [
+          i === state.current ? "active" : "",
+          state.attempts[i]?.includes(answers[i]) ? "done" : ""
+        ].filter(Boolean).join(" ");
+        button.addEventListener("click", () => {
+          if (state.advanceTimer) {
+            clearTimeout(state.advanceTimer);
+            state.advanceTimer = null;
+          }
+          state.current = i;
+          enterQuestion(state.current);
+          render();
+        });
+        els.grid.appendChild(button);
+      }
+    }
+
+    function answer(question, choice) {
+      if (state.advanceTimer) {
+        clearTimeout(state.advanceTimer);
+        state.advanceTimer = null;
+      }
+      if (!state.attempts[question]) state.attempts[question] = [];
+      if (!state.attempts[question].includes(choice)) state.attempts[question].push(choice);
+      if (choice === answers[question] && !state.solvedAt[question]) {
+        state.solvedAt[question] = Date.now();
+        state.timeSpent[question] = state.solvedAt[question] - state.questionStartedAt[question];
+        if (solvedQuestions().length === 40) state.finishedAt = state.solvedAt[question];
+      }
+      render();
+      if (choice === answers[question] && question < 40) {
+        state.advanceTimer = setTimeout(() => {
+          if (state.current === question) {
+            state.current += 1;
+            render();
+          }
+        }, 650);
+      }
+    }
+
+    function renderOptions() {
+      const selected = state.attempts[state.current] || [];
+      const correct = answers[state.current];
+      const isSolved = selected.includes(correct);
+      els.options.innerHTML = "";
+      ["A", "B", "C", "D"].forEach(choice => {
+        const button = document.createElement("button");
+        button.textContent = choice;
+        if (isSolved) {
+          button.disabled = true;
+          if (choice === correct) button.classList.add("correct");
+        } else if (selected.includes(choice)) {
+          button.disabled = true;
+          button.classList.add("wrong");
+        }
+        button.addEventListener("click", () => answer(state.current, choice));
+        els.options.appendChild(button);
+      });
+    }
+
+    function renderFeedback() {
+      const selected = state.attempts[state.current] || [];
+      const correct = answers[state.current];
+      const lastChoice = selected[selected.length - 1];
+      els.feedback.className = "feedback";
+      if (!selected.length) {
+        els.feedback.textContent = "Your result will show here as soon as you answer.";
+        return;
+      }
+      if (selected.includes(correct)) {
+        els.feedback.classList.add("good");
+        els.feedback.textContent = state.current < 40
+          ? "Correct. Moving to the next question..."
+          : "Correct. You finished the paper.";
+      } else {
+        els.feedback.classList.add("bad");
+        els.feedback.textContent = `Not ${lastChoice}. Try another option.`;
+      }
+    }
+
+    function renderScore() {
+      const entries = Object.entries(state.attempts);
+      const correctCount = solvedQuestions().length;
+      const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
+      els.answered.textContent = entries.length;
+      els.score.textContent = correctCount;
+      els.totalAttempts.textContent = totalAttempts;
+      els.accuracy.textContent = `${Math.round((correctCount / 40) * 100)}%`;
+      els.progressFill.style.width = `${(correctCount / 40) * 100}%`;
+      const solvedTimes = Object.values(state.timeSpent);
+      const avg = solvedTimes.length
+        ? solvedTimes.reduce((sum, time) => sum + time, 0) / solvedTimes.length
+        : 0;
+      els.avgTime.textContent = formatTime(avg);
+    }
+
+    function renderTimers() {
+      const now = state.finishedAt || Date.now();
+      els.totalTime.textContent = formatTime(now - state.startedAt);
+      const questionStart = state.questionStartedAt[state.current] || now;
+      const solvedTime = state.timeSpent[state.current];
+      els.questionTime.textContent = formatTime(solvedTime ?? (Date.now() - questionStart));
+    }
+
+    function renderSummary() {
+      const correctCount = solvedQuestions().length;
+      const isFinished = correctCount === 40;
+      els.summary.classList.toggle("visible", isFinished);
+      if (!isFinished) return;
+
+      const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
+      const solvedEntries = Object.entries(state.timeSpent);
+      const fastest = solvedEntries.reduce((best, item) => !best || item[1] < best[1] ? item : best, null);
+      const slowest = solvedEntries.reduce((worst, item) => !worst || item[1] > worst[1] ? item : worst, null);
+      els.summaryTotal.textContent = formatTime((state.finishedAt || Date.now()) - state.startedAt);
+      els.summaryAccuracy.textContent = `${Math.round((correctCount / 40) * 100)}%`;
+      els.summaryAttempts.textContent = totalAttempts;
+      els.summaryAvgAttempts.textContent = (totalAttempts / 40).toFixed(1);
+      els.summaryFastest.textContent = fastest ? `Q${fastest[0]} (${formatTime(fastest[1])})` : "--";
+      els.summarySlowest.textContent = slowest ? `Q${slowest[0]} (${formatTime(slowest[1])})` : "--";
+      submitLeaderboard();
+    }
+
+    function render() {
+      const page = pageFor(state.current);
+      enterQuestion(state.current);
+      els.title.textContent = `Question ${state.current}`;
+      els.hint.textContent = `This card uses paper page ${page.page}. The page also contains question${page.from === page.to ? "" : "s"} ${page.from === page.to ? page.from : `${page.from}-${page.to}`}.`;
+      els.page.src = `quiz_assets/page-${String(page.page).padStart(2, "0")}.png`;
+      els.pageLabel.textContent = `Paper page ${page.page}`;
+      els.rangeLabel.textContent = `Questions ${page.from === page.to ? page.from : `${page.from}-${page.to}`}`;
+      els.prev.disabled = state.current === 1;
+      els.next.disabled = state.current === 40;
+      renderOptions();
+      renderFeedback();
+      renderGrid();
+      renderScore();
+      renderTimers();
+      renderSummary();
+    }
+
+    els.prev.addEventListener("click", () => {
+      if (state.advanceTimer) {
+        clearTimeout(state.advanceTimer);
+        state.advanceTimer = null;
+      }
+      if (state.current > 1) {
+        state.current -= 1;
+        enterQuestion(state.current);
+        render();
+      }
+    });
+
+    els.next.addEventListener("click", () => {
+      if (state.advanceTimer) {
+        clearTimeout(state.advanceTimer);
+        state.advanceTimer = null;
+      }
+      if (state.current < 40) {
+        state.current += 1;
+        enterQuestion(state.current);
+        render();
+      }
+    });
+
+    els.playerName.value = localStorage.getItem("physics9702PlayerName") || "";
+    els.playerName.addEventListener("input", () => {
+      localStorage.setItem("physics9702PlayerName", cleanName(els.playerName.value));
+    });
+
+    els.refreshLeaderboard.addEventListener("click", () => loadLeaderboard());
+
+    setInterval(() => {
+      renderTimers();
+      renderSummary();
+    }, 1000);
+
+    initLeaderboard();
+    render();
+  </script>
+</body>
+</html>
