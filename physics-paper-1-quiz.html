@@ -27,6 +27,15 @@
       color: var(--ink);
     }
 
+    body.stats-hidden .stats-strip,
+    body.stats-hidden .progress,
+    body.stats-hidden .grid-panel,
+    body.stats-hidden .targets,
+    body.stats-hidden .summary,
+    body.stats-hidden .leaderboard {
+      display: none;
+    }
+
     body.prestart header,
     body.prestart main {
       display: none;
@@ -138,6 +147,12 @@
     }
 
     .score strong { color: var(--ink); }
+
+    .stats-toggle {
+      min-height: 34px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
 
     .stats-strip {
       display: grid;
@@ -589,7 +604,12 @@
         <h1>CAIE Physics 9702/11 October/November 2025</h1>
         <div class="meta">Solve one MCQ at a time. Choose A-D and the answer appears immediately.</div>
       </div>
-      <div class="score">Answered <strong id="answered">0</strong>/40 <span>|</span> Score <strong id="score">0</strong></div>
+      <div class="score">
+        <span>Answered <strong id="answered">0</strong>/40</span>
+        <span>|</span>
+        <span>Score <strong id="score">0</strong></span>
+        <button class="stats-toggle" id="statsToggle">Hide stats</button>
+      </div>
     </div>
     <div class="stats-strip">
       <div class="stat"><span>Total time</span><strong id="totalTime">00:00</strong></div>
@@ -764,6 +784,7 @@
       resumeNote: document.getElementById("resumeNote"),
       startTest: document.getElementById("startTest"),
       startFresh: document.getElementById("startFresh"),
+      statsToggle: document.getElementById("statsToggle"),
       hint: document.getElementById("hint"),
       options: document.getElementById("options"),
       feedback: document.getElementById("feedback"),
@@ -800,6 +821,12 @@
       , refreshLeaderboard: document.getElementById("refreshLeaderboard")
       , liveList: document.getElementById("liveList")
     };
+
+    function setStatsHidden(hidden) {
+      document.body.classList.toggle("stats-hidden", hidden);
+      els.statsToggle.textContent = hidden ? "Show stats" : "Hide stats";
+      localStorage.setItem("physics9702StatsHidden", hidden ? "true" : "false");
+    }
 
     function formatTime(ms) {
       const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -1471,6 +1498,10 @@
       if (leaderboard.mode !== "public") renderLiveSessions(state.startedAt ? [liveSnapshot()] : []);
     });
 
+    els.statsToggle.addEventListener("click", () => {
+      setStatsHidden(!document.body.classList.contains("stats-hidden"));
+    });
+
     setInterval(() => {
       renderTimers();
       renderSummary();
@@ -1484,6 +1515,7 @@
     });
 
     initLeaderboard();
+    setStatsHidden(localStorage.getItem("physics9702StatsHidden") === "true");
     renderGradeTargets();
     renderScore();
     renderTimers();
