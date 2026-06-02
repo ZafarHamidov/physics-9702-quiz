@@ -108,6 +108,22 @@
       display: none;
     }
 
+    .hidden {
+      display: none;
+    }
+
+    .auth-actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .auth-status {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
     header {
       position: sticky;
       top: 0;
@@ -700,6 +716,10 @@
       <p>Enter your leaderboard name, then start the 75-minute Paper 1 practice test.</p>
       <label for="startName">Name</label>
       <input id="startName" maxlength="24" placeholder="Your name">
+      <div class="auth-actions">
+        <button class="secondary" id="startGoogleSignIn">Sign in with Google</button>
+        <div class="auth-status" id="authStatus">Optional: sign in to use your Google name on the leaderboard.</div>
+      </div>
       <div class="resume-note" id="resumeNote">Saved progress found. Continue it, or start a new test and clear the saved progress.</div>
       <button id="startTest">Start test</button>
       <button class="secondary hidden" id="startFresh">Start new test</button>
@@ -716,6 +736,8 @@
         <span>Answered <strong id="answered">0</strong>/40</span>
         <span>|</span>
         <span>First-try score <strong id="score">0</strong></span>
+        <button class="stats-toggle" id="googleSignIn">Sign in</button>
+        <button class="stats-toggle hidden" id="googleSignOut">Sign out</button>
         <button class="results-toggle" id="resultsToggle">Results</button>
         <button class="stats-toggle" id="statsToggle">Hide stats</button>
       </div>
@@ -926,6 +948,8 @@
       mode: "local",
       db: null,
       api: null,
+      auth: null,
+      user: null,
       collectionName: window.LEADERBOARD_CONFIG?.collectionName || "physics_9702_w25_11",
       liveCollectionName: window.LEADERBOARD_CONFIG?.liveCollectionName || "physics_9702_w25_11_live",
       participantsCollectionName: window.LEADERBOARD_CONFIG?.participantsCollectionName || "physics_9702_w25_11_participants",
@@ -942,6 +966,10 @@
       resumeNote: document.getElementById("resumeNote"),
       startTest: document.getElementById("startTest"),
       startFresh: document.getElementById("startFresh"),
+      startGoogleSignIn: document.getElementById("startGoogleSignIn"),
+      googleSignIn: document.getElementById("googleSignIn"),
+      googleSignOut: document.getElementById("googleSignOut"),
+      authStatus: document.getElementById("authStatus"),
       statsToggle: document.getElementById("statsToggle"),
       resultsToggle: document.getElementById("resultsToggle"),
       hint: document.getElementById("hint"),
@@ -1072,6 +1100,32 @@
       return (name || "Anonymous").trim().replace(/\s+/g, " ").slice(0, 24) || "Anonymous";
     }
 
+    function authName() {
+      return leaderboard.user?.displayName || els.playerName.value;
+    }
+
+    function applyAuthUser(user) {
+      leaderboard.user = user;
+      const signedIn = Boolean(user);
+      els.googleSignIn.classList.toggle("hidden", signedIn);
+      els.googleSignOut.classList.toggle("hidden", !signedIn);
+      els.startGoogleSignIn.classList.toggle("hidden", signedIn);
+      els.authStatus.textContent = signedIn
+        ? `Signed in as ${user.displayName || user.email}`
+        : "Optional: sign in to use your Google name on the leaderboard.";
+      if (signedIn) {
+        const name = cleanName(user.displayName || user.email);
+        els.playerName.value = name;
+        els.startName.value = name;
+        localStorage.setItem("physics9702PlayerName", name);
+        saveProgress();
+        if (state.startedAt) {
+          updateLiveSession();
+          updateParticipant();
+        }
+      }
+    }
+
     function saveProgress() {
       if (!state.startedAt) {
         localStorage.removeItem(progressKey);
@@ -1088,6 +1142,7 @@
         submitted: leaderboard.submitted,
         liveFinished: leaderboard.liveFinished,
         sessionId: leaderboard.sessionId,
+        uid: leaderboard.user?.uid || null,
         completionShown,
         name: els.playerName.value
       }));
@@ -1135,7 +1190,8 @@
         ? solvedTimes.reduce((sum, time) => sum + time, 0) / solvedTimes.length
         : 0;
       return {
-        name: cleanName(els.playerName.value),
+        name: cleanName(authName()),
+        uid: leaderboard.user?.uid || null,
         score: correctCount,
         accuracy: Math.round((correctCount / 40) * 100),
         totalAttempts,
@@ -1160,7 +1216,7 @@
       const totalTime = (state.finishedAt || Date.now()) - state.startedAt;
       const remaining = examDurationMs - totalTime;
       return {
-        name: cleanName(els.playerName.value),
+        name: cleanName(authName()),
         correctCount,
         grade: gradeFor(correctCount),
         totalAttempts,
@@ -1322,9 +1378,12 @@
       try {
         const firebaseApp = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
         const firestore = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-        leaderboard.api = { ...firebaseApp, ...firestore };
+        const auth = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
+        leaderboard.api = { ...firebaseApp, ...firestore, ...auth };
         const app = leaderboard.api.initializeApp(config);
         leaderboard.db = leaderboard.api.getFirestore(app);
+        leaderboard.auth = leaderboard.api.getAuth(app);
+        leaderboard.api.onAuthStateChanged(leaderboard.auth, applyAuthUser);
         leaderboard.mode = "public";
         els.leaderboardStatus.textContent = "Public leaderboard connected. Live and completed scores are shared.";
         await loadLeaderboard();
@@ -1854,6 +1913,33 @@
     els.startName.addEventListener("keydown", event => {
       if (event.key === "Enter") els.startTest.click();
     });
+
+    async function signInWithGoogle() {
+      if (!leaderboard.auth || !leaderboard.api) {
+        els.authStatus.textContent = "Google sign-in is not ready yet. Try again in a moment.";
+        return;
+      }
+      try {
+        const provider = new leaderboard.api.GoogleAuthProvider();
+        await leaderboard.api.signInWithPopup(leaderboard.auth, provider);
+      } catch {
+        els.authStatus.textContent = "Google sign-in failed. Check Firebase Authentication settings.";
+      }
+    }
+
+    async function signOutGoogle() {
+      if (!leaderboard.auth || !leaderboard.api) return;
+      try {
+        await leaderboard.api.signOut(leaderboard.auth);
+        applyAuthUser(null);
+      } catch {
+        els.authStatus.textContent = "Sign out failed. Try again.";
+      }
+    }
+
+    els.startGoogleSignIn.addEventListener("click", signInWithGoogle);
+    els.googleSignIn.addEventListener("click", signInWithGoogle);
+    els.googleSignOut.addEventListener("click", signOutGoogle);
 
     els.refreshLeaderboard.addEventListener("click", () => {
       loadLeaderboard();

@@ -39,6 +39,20 @@ To send results by email, install the official Firebase extension **Trigger Emai
 
 Official docs: https://firebase.google.com/docs/extensions/official/firestore-send-email
 
+## Google sign-in
+
+To let users sign in with Google:
+
+1. Open Firebase Console.
+2. Go to Authentication.
+3. Click Get started if needed.
+4. Open Sign-in method.
+5. Enable Google.
+6. Set a support email and save.
+7. In Authentication > Settings > Authorized domains, make sure `zafarhamidov.github.io` is allowed.
+
+The quiz uses the signed-in user's Google display name on the leaderboard. It stores the Firebase user ID with scores, but does not display email addresses in the public leaderboard.
+
 ## GitHub Pages
 
 Publish the repository with GitHub Pages set to deploy from the `main` branch root. `index.html` redirects to the quiz page.
