@@ -824,10 +824,16 @@
         <div class="summary-grid">
           <div class="summary-item"><span>Name</span><strong id="completeName">--</strong></div>
           <div class="summary-item"><span>Score</span><strong id="completeScore">0/40</strong></div>
+          <div class="summary-item"><span>Grade</span><strong id="completeGrade">--</strong></div>
+          <div class="summary-item"><span>Accuracy</span><strong id="completeAccuracy">0%</strong></div>
           <div class="summary-item"><span>Total time</span><strong id="completeTotal">00:00</strong></div>
           <div class="summary-item"><span>Exam time left</span><strong id="completeTimeLeft">75:00</strong></div>
+          <div class="summary-item"><span>Average time/question</span><strong id="completeAvgQuestionTime">00:00</strong></div>
+          <div class="summary-item"><span>Average time/correct</span><strong id="completeAvgCorrectTime">00:00</strong></div>
           <div class="summary-item"><span>Total attempts</span><strong id="completeAttempts">0</strong></div>
           <div class="summary-item"><span>Average attempts</span><strong id="completeAvgAttempts">0.0</strong></div>
+          <div class="summary-item"><span>Extra attempts</span><strong id="completeExtraAttempts">0</strong></div>
+          <div class="summary-item"><span>First-try correct</span><strong id="completeFirstTry">0</strong></div>
           <div class="summary-item"><span>Fastest solved</span><strong id="completeFastest">--</strong></div>
           <div class="summary-item"><span>Slowest solved</span><strong id="completeSlowest">--</strong></div>
         </div>
@@ -931,10 +937,16 @@
       closeCompletion: document.getElementById("closeCompletion"),
       completeName: document.getElementById("completeName"),
       completeScore: document.getElementById("completeScore"),
+      completeGrade: document.getElementById("completeGrade"),
+      completeAccuracy: document.getElementById("completeAccuracy"),
       completeTotal: document.getElementById("completeTotal"),
       completeTimeLeft: document.getElementById("completeTimeLeft"),
+      completeAvgQuestionTime: document.getElementById("completeAvgQuestionTime"),
+      completeAvgCorrectTime: document.getElementById("completeAvgCorrectTime"),
       completeAttempts: document.getElementById("completeAttempts"),
       completeAvgAttempts: document.getElementById("completeAvgAttempts"),
+      completeExtraAttempts: document.getElementById("completeExtraAttempts"),
+      completeFirstTry: document.getElementById("completeFirstTry"),
       completeFastest: document.getElementById("completeFastest"),
       completeSlowest: document.getElementById("completeSlowest"),
       resultEmail: document.getElementById("resultEmail"),
@@ -1010,6 +1022,11 @@
       return Object.entries(state.attempts)
         .filter(([q, choices]) => choices.includes(answers[q]))
         .map(([q]) => Number(q));
+    }
+
+    function gradeFor(score) {
+      const boundary = gradeBoundaries.find(item => score >= item.marks);
+      return boundary ? boundary.grade : "U";
     }
 
     function cleanName(name) {
@@ -1089,6 +1106,9 @@
     function resultSummary() {
       const correctCount = solvedQuestions().length;
       const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
+      const firstTryCorrect = Object.entries(state.attempts)
+        .filter(([q, choices]) => choices[0] === answers[q])
+        .length;
       const solvedEntries = Object.entries(state.timeSpent);
       const fastest = solvedEntries.reduce((best, item) => !best || item[1] < best[1] ? item : best, null);
       const slowest = solvedEntries.reduce((worst, item) => !worst || item[1] > worst[1] ? item : worst, null);
@@ -1097,10 +1117,15 @@
       return {
         name: cleanName(els.playerName.value),
         correctCount,
+        grade: gradeFor(correctCount),
         totalAttempts,
+        extraAttempts: Math.max(0, totalAttempts - 40),
+        firstTryCorrect,
         totalTime,
         remaining,
         avgAttempts: totalAttempts / 40,
+        avgQuestionTime: totalTime / 40,
+        avgCorrectTime: correctCount ? totalTime / correctCount : 0,
         fastest,
         slowest
       };
@@ -1110,11 +1135,17 @@
       const summary = resultSummary();
       els.completeName.textContent = summary.name;
       els.completeScore.textContent = `${summary.correctCount}/40`;
+      els.completeGrade.textContent = summary.grade;
+      els.completeAccuracy.textContent = `${Math.round((summary.correctCount / 40) * 100)}%`;
       els.completeTotal.textContent = formatTime(summary.totalTime);
       els.completeTimeLeft.textContent = summary.remaining >= 0 ? formatTime(summary.remaining) : `Over by ${formatTime(Math.abs(summary.remaining))}`;
       els.completeTimeLeft.style.color = summary.remaining >= 0 ? "" : "var(--bad)";
+      els.completeAvgQuestionTime.textContent = formatTime(summary.avgQuestionTime);
+      els.completeAvgCorrectTime.textContent = formatTime(summary.avgCorrectTime);
       els.completeAttempts.textContent = summary.totalAttempts;
       els.completeAvgAttempts.textContent = summary.avgAttempts.toFixed(1);
+      els.completeExtraAttempts.textContent = summary.extraAttempts;
+      els.completeFirstTry.textContent = summary.firstTryCorrect;
       els.completeFastest.textContent = summary.fastest ? `Q${summary.fastest[0]} (${formatTime(summary.fastest[1])})` : "--";
       els.completeSlowest.textContent = summary.slowest ? `Q${summary.slowest[0]} (${formatTime(summary.slowest[1])})` : "--";
     }
@@ -1126,10 +1157,16 @@
         "",
         `Name: ${summary.name}`,
         `Score: ${summary.correctCount}/40`,
+        `Grade: ${summary.grade}`,
+        `Accuracy: ${Math.round((summary.correctCount / 40) * 100)}%`,
         `Total time: ${formatTime(summary.totalTime)}`,
         `Exam time left: ${summary.remaining >= 0 ? formatTime(summary.remaining) : `Over by ${formatTime(Math.abs(summary.remaining))}`}`,
+        `Average time per question: ${formatTime(summary.avgQuestionTime)}`,
+        `Average time per correct answer: ${formatTime(summary.avgCorrectTime)}`,
         `Total attempts: ${summary.totalAttempts}`,
         `Average attempts per question: ${summary.avgAttempts.toFixed(1)}`,
+        `Extra attempts after first choices: ${summary.extraAttempts}`,
+        `First-try correct: ${summary.firstTryCorrect}/40`,
         `Fastest solved: ${summary.fastest ? `Q${summary.fastest[0]} (${formatTime(summary.fastest[1])})` : "--"}`,
         `Slowest solved: ${summary.slowest ? `Q${summary.slowest[0]} (${formatTime(summary.slowest[1])})` : "--"}`,
         "",
