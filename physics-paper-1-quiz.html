@@ -1284,7 +1284,6 @@
     });
 
     els.startTest.addEventListener("click", () => {
-      if (state.startedAt) return;
       els.playerName.value = cleanName(els.startName.value);
       els.startName.value = els.playerName.value;
       localStorage.setItem("physics9702PlayerName", els.playerName.value);
@@ -1336,6 +1335,7 @@
     renderLiveSessions([]);
     savedProgressAvailable = loadProgress();
     els.resumeNote.classList.toggle("visible", savedProgressAvailable);
+    els.startTest.textContent = savedProgressAvailable ? "Continue test" : "Start test";
   </script>
 </body>
 </html>
