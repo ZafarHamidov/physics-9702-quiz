@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /physics_9702_w25_11/{scoreId} {
+      allow read: if true;
+      allow create: if
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 24 &&
+        request.resource.data.score is number &&
+        request.resource.data.score >= 0 &&
+        request.resource.data.score <= 40 &&
+        request.resource.data.totalAttempts is number &&
+        request.resource.data.totalAttempts >= 40 &&
+        request.resource.data.totalAttempts <= 160 &&
+        request.resource.data.totalTime is number &&
+        request.resource.data.totalTime >= 0 &&
+        request.resource.data.totalTime <= 21600000;
+    }
+
+    match /physics_9702_w25_11_live/{sessionId} {
+      allow read: if true;
+      allow create, update: if
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 24 &&
+        request.resource.data.score is number &&
+        request.resource.data.score >= 0 &&
+        request.resource.data.score <= 40 &&
+        request.resource.data.totalAttempts is number &&
+        request.resource.data.totalAttempts >= 0 &&
+        request.resource.data.totalAttempts <= 160 &&
+        request.resource.data.totalTime is number &&
+        request.resource.data.totalTime >= 0 &&
+        request.resource.data.totalTime <= 21600000 &&
+        request.resource.data.currentQuestion is number &&
+        request.resource.data.currentQuestion >= 1 &&
+        request.resource.data.currentQuestion <= 40;
+      allow delete: if true;
+    }
+  }
+}

@@ -2,42 +2,23 @@
 
 Single-page quiz for CAIE Physics 9702/11 October/November 2025.
 
-## Public leaderboard
+## Public and live leaderboard
 
-The quiz works without setup using a local browser leaderboard. To make scores public for friends:
+The quiz works without setup using a local browser leaderboard. To make completed scores and the live "currently taking the quiz" list public for friends:
 
 1. Create a Firebase project.
 2. Create a Firestore database.
 3. Add a web app in Firebase project settings.
 4. Paste the Firebase web config into `leaderboard-config.js`.
-5. Use Firestore rules that allow reads and creates for the quiz collection.
+5. Open Firestore Rules and paste the contents of `firestore.rules`.
+6. Publish the rules.
 
-Example development-only Firestore rule:
+The app uses these Firestore collections:
 
-```txt
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /physics_9702_w25_11/{scoreId} {
-      allow read: if true;
-      allow create: if
-        request.resource.data.name is string &&
-        request.resource.data.score is number &&
-        request.resource.data.totalAttempts is number &&
-        request.resource.data.totalTime is number;
-    }
-    match /physics_9702_w25_11_live/{sessionId} {
-      allow read: if true;
-      allow create, update: if
-        request.resource.data.name is string &&
-        request.resource.data.score is number &&
-        request.resource.data.totalAttempts is number &&
-        request.resource.data.totalTime is number;
-      allow delete: if true;
-    }
-  }
-}
-```
+- `physics_9702_w25_11` for completed scores.
+- `physics_9702_w25_11_live` for active sessions.
+
+If Firebase is not configured, each browser only sees its own local scores.
 
 ## GitHub Pages
 
