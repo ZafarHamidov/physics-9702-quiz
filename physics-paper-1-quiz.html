@@ -715,7 +715,7 @@
       <div class="score">
         <span>Answered <strong id="answered">0</strong>/40</span>
         <span>|</span>
-        <span>Score <strong id="score">0</strong></span>
+        <span>First-try score <strong id="score">0</strong></span>
         <button class="results-toggle" id="resultsToggle">Results</button>
         <button class="stats-toggle" id="statsToggle">Hide stats</button>
       </div>
@@ -840,7 +840,7 @@
       <div class="modal-body">
         <div class="summary-grid">
           <div class="summary-item"><span>Name</span><strong id="completeName">--</strong></div>
-          <div class="summary-item"><span>Score</span><strong id="completeScore">0/40</strong></div>
+          <div class="summary-item"><span>First-try score</span><strong id="completeScore">0/40</strong></div>
           <div class="summary-item"><span>Grade</span><strong id="completeGrade">--</strong></div>
           <div class="summary-item"><span>Accuracy</span><strong id="completeAccuracy">0%</strong></div>
           <div class="summary-item"><span>Total time</span><strong id="completeTotal">00:00</strong></div>
@@ -1126,11 +1126,11 @@
     }
 
     function scoreSnapshot() {
-      const correctCount = solvedQuestions().length;
+      const counts = statusCounts();
+      const correctCount = counts.firstTry;
       const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
       const totalTime = (state.finishedAt || Date.now()) - (state.startedAt || Date.now());
       const solvedTimes = Object.values(state.timeSpent);
-      const counts = statusCounts();
       const avgTime = solvedTimes.length
         ? solvedTimes.reduce((sum, time) => sum + time, 0) / solvedTimes.length
         : 0;
@@ -1151,9 +1151,9 @@
     }
 
     function resultSummary() {
-      const correctCount = solvedQuestions().length;
       const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
       const counts = statusCounts();
+      const correctCount = counts.firstTry;
       const solvedEntries = Object.entries(state.timeSpent);
       const fastest = solvedEntries.reduce((best, item) => !best || item[1] < best[1] ? item : best, null);
       const slowest = solvedEntries.reduce((worst, item) => !worst || item[1] > worst[1] ? item : worst, null);
@@ -1206,7 +1206,7 @@
         "Physics 9702/11 Quiz Results",
         "",
         `Name: ${summary.name}`,
-        `Score: ${summary.correctCount}/40`,
+        `First-try score: ${summary.correctCount}/40`,
         `Grade: ${summary.grade}`,
         `Accuracy: ${Math.round((summary.correctCount / 40) * 100)}%`,
         `Total time: ${formatTime(summary.totalTime)}`,
@@ -1641,7 +1641,7 @@
 
     function renderScore() {
       const entries = Object.entries(state.attempts);
-      const correctCount = solvedQuestions().length;
+      const correctCount = statusCounts().firstTry;
       const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
       els.answered.textContent = entries.length;
       els.score.textContent = correctCount;
