@@ -265,6 +265,43 @@
       font-size: 13px;
     }
 
+    .mode-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 18px 12px;
+    }
+
+    .mode-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 32px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 6px 16px rgba(16, 24, 40, 0.04);
+    }
+
+    .mode-chip.active {
+      border-color: rgba(54, 87, 216, 0.28);
+      background: #eef2ff;
+      color: var(--accent);
+    }
+
+    .mode-chip .mini-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
     .score {
       display: flex;
       flex-wrap: wrap;
@@ -385,6 +422,8 @@
 
     .card {
       padding: 18px;
+      position: sticky;
+      top: 162px;
     }
 
     .eyebrow {
@@ -392,6 +431,27 @@
       font-size: 13px;
       font-weight: 700;
       text-transform: uppercase;
+    }
+
+    .question-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .question-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
     }
 
     h2 {
@@ -406,6 +466,10 @@
       color: var(--muted);
       font-size: 14px;
       line-height: 1.45;
+      padding: 12px;
+      border: 1px solid #e6eaf2;
+      border-radius: 8px;
+      background: #f8fafc;
     }
 
     .options {
@@ -451,6 +515,14 @@
       border: 1px solid var(--line);
       font-size: 14px;
       line-height: 1.4;
+    }
+
+    .study-section-title {
+      margin: 16px 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
     }
 
     .options button {
@@ -966,7 +1038,9 @@
     @media (max-width: 560px) {
       header { position: static; }
       .bar { padding: 12px; }
+      .mode-strip { padding-left: 12px; padding-right: 12px; }
       .options { grid-template-columns: 1fr; }
+      .card { position: static; }
       .stats-strip, .progress { padding-left: 12px; padding-right: 12px; }
       .question-grid { grid-template-columns: repeat(5, 1fr); }
       .summary-grid { grid-template-columns: 1fr; }
@@ -1043,6 +1117,12 @@
         <button class="stats-toggle" id="statsToggle">Hide stats</button>
       </div>
     </div>
+    <div class="mode-strip" aria-label="PaperPilot modes">
+      <span class="mode-chip active"><span class="mini-dot"></span>Exam practice</span>
+      <span class="mode-chip"><span class="mini-dot"></span>Live leaderboard</span>
+      <span class="mode-chip"><span class="mini-dot"></span>Saved progress</span>
+      <span class="mode-chip"><span class="mini-dot"></span>Results sharing</span>
+    </div>
     <div class="stats-strip">
       <div class="stat"><span>Total time</span><strong id="totalTime">00:00</strong></div>
       <div class="stat"><span>Time left</span><strong id="timeLeft">75:00</strong></div>
@@ -1064,13 +1144,19 @@
     <div class="layout">
       <aside>
         <section class="card">
-          <div class="eyebrow">Question Card</div>
-          <h2 id="questionTitle">Question 1</h2>
+          <div class="question-card-head">
+            <div>
+              <div class="eyebrow">Question Card</div>
+              <h2 id="questionTitle">Question 1</h2>
+            </div>
+            <span class="question-badge">MCQ</span>
+          </div>
           <div class="player-form">
             <label for="playerName">Leaderboard name</label>
             <input id="playerName" maxlength="24" placeholder="Your name">
           </div>
           <p class="hint" id="hint">Read the matching question on the paper page, then pick your answer.</p>
+          <div class="study-section-title">Choose an answer</div>
           <div class="options" id="options"></div>
           <div class="feedback" id="feedback">Your result will show here as soon as you answer.</div>
           <div class="nav">
