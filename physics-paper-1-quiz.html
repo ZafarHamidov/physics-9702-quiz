@@ -191,6 +191,10 @@
       transition: width 220ms ease;
     }
 
+    .progress-fill.overtime {
+      background: var(--bad);
+    }
+
     main {
       max-width: 1240px;
       margin: 0 auto;
@@ -1251,7 +1255,6 @@
       els.score.textContent = correctCount;
       els.totalAttempts.textContent = totalAttempts;
       els.accuracy.textContent = `${Math.round((correctCount / 40) * 100)}%`;
-      els.progressFill.style.width = `${(correctCount / 40) * 100}%`;
       const solvedTimes = Object.values(state.timeSpent);
       const avg = solvedTimes.length
         ? solvedTimes.reduce((sum, time) => sum + time, 0) / solvedTimes.length
@@ -1274,6 +1277,8 @@
       els.totalTime.textContent = formatTime(elapsed);
       els.timeLeft.textContent = remaining >= 0 ? formatTime(remaining) : `+${formatTime(Math.abs(remaining))}`;
       els.timeLeft.style.color = remaining >= 0 ? "" : "var(--bad)";
+      els.progressFill.style.width = `${Math.min(100, (elapsed / examDurationMs) * 100)}%`;
+      els.progressFill.classList.toggle("overtime", remaining < 0);
       const questionStart = state.questionStartedAt[state.current] || now;
       const solvedTime = state.timeSpent[state.current];
       els.questionTime.textContent = formatTime(solvedTime ?? (Date.now() - questionStart));
