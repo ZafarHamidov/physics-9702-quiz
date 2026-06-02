@@ -26,6 +26,15 @@ service cloud.firestore {
         request.resource.data.totalAttempts is number &&
         request.resource.data.totalTime is number;
     }
+    match /physics_9702_w25_11_live/{sessionId} {
+      allow read: if true;
+      allow create, update: if
+        request.resource.data.name is string &&
+        request.resource.data.score is number &&
+        request.resource.data.totalAttempts is number &&
+        request.resource.data.totalTime is number;
+      allow delete: if true;
+    }
   }
 }
 ```

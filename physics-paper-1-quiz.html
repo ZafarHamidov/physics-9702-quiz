@@ -453,6 +453,15 @@
       font-weight: 700;
     }
 
+    .live-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 6px;
+      border-radius: 50%;
+      background: var(--good);
+    }
+
     .paper {
       overflow: hidden;
       min-height: 70vh;
@@ -597,6 +606,14 @@
           <div class="leaderboard-status" id="leaderboardStatus">Local leaderboard. Add Firebase config to make it public.</div>
           <div class="leaderboard-list" id="leaderboardList"></div>
         </section>
+        <section class="leaderboard">
+          <div class="leaderboard-head">
+            <h3><span class="live-dot"></span>Live now</h3>
+            <button id="refreshLive">Refresh</button>
+          </div>
+          <div class="leaderboard-status" id="liveStatus">Live sessions appear here while people are taking the quiz.</div>
+          <div class="leaderboard-list" id="liveList"></div>
+        </section>
       </aside>
 
       <section class="paper">
@@ -652,6 +669,10 @@
       db: null,
       api: null,
       collectionName: window.LEADERBOARD_CONFIG?.collectionName || "physics_9702_w25_11",
+      liveCollectionName: window.LEADERBOARD_CONFIG?.liveCollectionName || "physics_9702_w25_11_live",
+      sessionId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      liveUnsubscribe: null,
+      liveFinished: false,
       submitted: false
     };
     const els = {
@@ -691,6 +712,9 @@
       , leaderboardStatus: document.getElementById("leaderboardStatus")
       , leaderboardList: document.getElementById("leaderboardList")
       , refreshLeaderboard: document.getElementById("refreshLeaderboard")
+      , liveStatus: document.getElementById("liveStatus")
+      , liveList: document.getElementById("liveList")
+      , refreshLive: document.getElementById("refreshLive")
     };
 
     function formatTime(ms) {
@@ -742,6 +766,17 @@
       };
     }
 
+    function liveSnapshot() {
+      return {
+        ...scoreSnapshot(),
+        sessionId: leaderboard.sessionId,
+        currentQuestion: state.current,
+        started: Boolean(state.startedAt),
+        finished: solvedQuestions().length === 40,
+        lastActive: Date.now()
+      };
+    }
+
     function rankEntries(entries) {
       return [...entries].sort((a, b) =>
         b.score - a.score ||
@@ -780,11 +815,97 @@
         leaderboard.mode = "public";
         els.leaderboardStatus.textContent = "Public leaderboard connected.";
         await loadLeaderboard();
+        subscribeLiveSessions();
       } catch {
         leaderboard.mode = "local";
         els.leaderboardStatus.textContent = "Public leaderboard could not connect, using local scores.";
         renderLeaderboard(localEntries());
       }
+    }
+
+    async function updateLiveSession() {
+      if (!state.startedAt || solvedQuestions().length === 40) return;
+      const entry = liveSnapshot();
+      if (leaderboard.mode !== "public") renderLiveSessions([entry]);
+      if (leaderboard.mode !== "public" || !leaderboard.db) return;
+      try {
+        await leaderboard.api.setDoc(
+          leaderboard.api.doc(leaderboard.db, leaderboard.liveCollectionName, leaderboard.sessionId),
+          {
+            ...entry,
+            updatedAt: leaderboard.api.serverTimestamp()
+          }
+        );
+      } catch {
+        els.liveStatus.textContent = "Could not update public live session. Showing local live status.";
+        renderLiveSessions([entry]);
+      }
+    }
+
+    async function finishLiveSession() {
+      if (leaderboard.liveFinished) return;
+      leaderboard.liveFinished = true;
+      if (leaderboard.mode !== "public" || !leaderboard.db) return;
+      try {
+        await leaderboard.api.deleteDoc(
+          leaderboard.api.doc(leaderboard.db, leaderboard.liveCollectionName, leaderboard.sessionId)
+        );
+      } catch {
+        // Stale sessions are hidden after the activity window.
+      }
+    }
+
+    function subscribeLiveSessions() {
+      if (leaderboard.mode !== "public" || !leaderboard.db || leaderboard.liveUnsubscribe) return;
+      try {
+        leaderboard.liveUnsubscribe = leaderboard.api.onSnapshot(
+          leaderboard.api.collection(leaderboard.db, leaderboard.liveCollectionName),
+          snapshot => {
+            const cutoff = Date.now() - 2 * 60 * 1000;
+            const entries = snapshot.docs
+              .map(doc => doc.data())
+              .filter(entry => entry.started && !entry.finished && (entry.lastActive || 0) >= cutoff);
+            renderLiveSessions(entries);
+          },
+          () => {
+            els.liveStatus.textContent = "Live public updates are unavailable right now.";
+          }
+        );
+      } catch {
+        els.liveStatus.textContent = "Live public updates are unavailable right now.";
+      }
+    }
+
+    function renderLiveSessions(entries) {
+      const ranked = rankEntries(entries).filter(entry => entry.started && !entry.finished);
+      els.liveList.innerHTML = "";
+      els.liveStatus.textContent = leaderboard.mode === "public"
+        ? "Showing active sessions from the last 2 minutes."
+        : "Local preview only until Firebase is configured.";
+      if (!ranked.length) {
+        const empty = document.createElement("div");
+        empty.className = "leaderboard-status";
+        empty.textContent = "Nobody is active right now.";
+        els.liveList.appendChild(empty);
+        return;
+      }
+      ranked.forEach((entry, index) => {
+        const row = document.createElement("div");
+        row.className = "leaderboard-row";
+        const rank = document.createElement("div");
+        const details = document.createElement("div");
+        const name = document.createElement("strong");
+        const meta = document.createElement("span");
+        const score = document.createElement("div");
+        rank.textContent = index + 1;
+        name.textContent = entry.name || "Anonymous";
+        meta.textContent = `Q${entry.currentQuestion || 1} | ${formatTime(entry.totalTime)} | ${entry.totalAttempts} attempts`;
+        score.className = "leaderboard-score";
+        score.textContent = `${entry.score}/40`;
+        details.append(name, meta);
+        row.append(rank, details, score);
+        els.liveList.appendChild(row);
+      });
     }
 
     async function submitLeaderboard() {
@@ -1010,6 +1131,7 @@
       els.summaryFastest.textContent = fastest ? `Q${fastest[0]} (${formatTime(fastest[1])})` : "--";
       els.summarySlowest.textContent = slowest ? `Q${slowest[0]} (${formatTime(slowest[1])})` : "--";
       submitLeaderboard();
+      finishLiveSession();
     }
 
     function render() {
@@ -1029,6 +1151,7 @@
       renderScore();
       renderTimers();
       renderSummary();
+      updateLiveSession();
     }
 
     els.prev.addEventListener("click", () => {
@@ -1066,12 +1189,14 @@
       state.startedAt = null;
       state.finishedAt = null;
       leaderboard.submitted = false;
+      leaderboard.liveFinished = false;
       document.body.classList.add("prestart");
       els.startScreen.style.display = "";
       els.startName.value = els.playerName.value;
       renderScore();
       renderTimers();
       renderLeaderboard(localEntries());
+      renderLiveSessions([]);
     });
 
     els.playerName.value = localStorage.getItem("physics9702PlayerName") || "";
@@ -1092,10 +1217,12 @@
       els.startName.value = els.playerName.value;
       localStorage.setItem("physics9702PlayerName", els.playerName.value);
       state.startedAt = Date.now();
+      leaderboard.liveFinished = false;
       enterQuestion(1);
       document.body.classList.remove("prestart");
       els.startScreen.style.display = "none";
       render();
+      updateLiveSession();
     });
 
     els.startName.addEventListener("keydown", event => {
@@ -1103,16 +1230,22 @@
     });
 
     els.refreshLeaderboard.addEventListener("click", () => loadLeaderboard());
+    els.refreshLive.addEventListener("click", () => {
+      if (state.startedAt) updateLiveSession();
+      if (leaderboard.mode !== "public") renderLiveSessions(state.startedAt ? [liveSnapshot()] : []);
+    });
 
     setInterval(() => {
       renderTimers();
       renderSummary();
+      updateLiveSession();
     }, 1000);
 
     initLeaderboard();
     renderGradeTargets();
     renderScore();
     renderTimers();
+    renderLiveSessions([]);
   </script>
 </body>
 </html>
