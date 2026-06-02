@@ -36,6 +36,10 @@
       display: none;
     }
 
+    body.modal-open {
+      overflow: hidden;
+    }
+
     body.prestart header,
     body.prestart main {
       display: none;
@@ -317,6 +321,67 @@
       background: #e7ebef;
       color: #8290a0;
       border-color: #e7ebef;
+    }
+
+    .formula-button {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      background: rgba(20, 28, 36, 0.72);
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .modal.visible {
+      display: block;
+    }
+
+    .modal-panel {
+      max-width: 860px;
+      margin: 0 auto;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-head h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .modal-head button {
+      min-height: 34px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .modal-body {
+      padding: 10px;
+      background: #e9eef5;
+    }
+
+    .modal-body img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid #cbd4df;
+      background: #fff;
     }
 
     .grid-panel {
@@ -646,6 +711,7 @@
             <button id="resetQuiz">Reset</button>
             <button id="next">Next</button>
           </div>
+          <button class="formula-button" id="formulaButton">Constants and formulas</button>
         </section>
         <section class="grid-panel">
           <div class="question-grid" id="questionGrid"></div>
@@ -707,6 +773,18 @@
       </section>
     </div>
   </main>
+
+  <div class="modal" id="formulaModal" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h3>Constants and formulas</h3>
+        <button id="closeFormula">Close</button>
+      </div>
+      <div class="modal-body">
+        <img src="quiz_assets/page-02.png" alt="Question paper page 2 with constants and formulas">
+      </div>
+    </div>
+  </div>
 
   <script src="leaderboard-config.js"></script>
   <script type="module">
@@ -791,6 +869,9 @@
       prev: document.getElementById("prev"),
       resetQuiz: document.getElementById("resetQuiz"),
       next: document.getElementById("next"),
+      formulaButton: document.getElementById("formulaButton"),
+      formulaModal: document.getElementById("formulaModal"),
+      closeFormula: document.getElementById("closeFormula"),
       grid: document.getElementById("questionGrid"),
       page: document.getElementById("paperPage"),
       pageLabel: document.getElementById("pageLabel"),
@@ -826,6 +907,12 @@
       document.body.classList.toggle("stats-hidden", hidden);
       els.statsToggle.textContent = hidden ? "Show stats" : "Hide stats";
       localStorage.setItem("physics9702StatsHidden", hidden ? "true" : "false");
+    }
+
+    function setFormulaModal(open) {
+      els.formulaModal.classList.toggle("visible", open);
+      els.formulaModal.setAttribute("aria-hidden", open ? "false" : "true");
+      document.body.classList.toggle("modal-open", open);
     }
 
     function formatTime(ms) {
@@ -1500,6 +1587,15 @@
 
     els.statsToggle.addEventListener("click", () => {
       setStatsHidden(!document.body.classList.contains("stats-hidden"));
+    });
+
+    els.formulaButton.addEventListener("click", () => setFormulaModal(true));
+    els.closeFormula.addEventListener("click", () => setFormulaModal(false));
+    els.formulaModal.addEventListener("click", event => {
+      if (event.target === els.formulaModal) setFormulaModal(false);
+    });
+    window.addEventListener("keydown", event => {
+      if (event.key === "Escape") setFormulaModal(false);
     });
 
     setInterval(() => {
