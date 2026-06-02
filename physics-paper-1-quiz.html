@@ -73,7 +73,7 @@
 
     .stats-strip {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 10px;
       max-width: 1240px;
       margin: 0 auto;
@@ -287,6 +287,44 @@
       font-size: 16px;
     }
 
+    .targets {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .targets h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .target-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .target-table th,
+    .target-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+
+    .target-table th {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .target-table td:last-child,
+    .target-table th:last-child {
+      text-align: right;
+    }
+
     .player-form {
       display: grid;
       gap: 8px;
@@ -422,6 +460,9 @@
       .stats-strip, .progress { padding-left: 12px; padding-right: 12px; }
       .question-grid { grid-template-columns: repeat(5, 1fr); }
       .summary-grid { grid-template-columns: 1fr; }
+      .target-table { font-size: 12px; }
+      .target-table th,
+      .target-table td { padding: 7px 4px; }
       .page-wrap { padding: 6px; }
       .paper-head { flex-direction: column; padding: 10px; }
       .leaderboard-row { grid-template-columns: 24px minmax(0, 1fr); }
@@ -441,6 +482,7 @@
     </div>
     <div class="stats-strip">
       <div class="stat"><span>Total time</span><strong id="totalTime">00:00</strong></div>
+      <div class="stat"><span>Time left</span><strong id="timeLeft">75:00</strong></div>
       <div class="stat"><span>This question</span><strong id="questionTime">00:00</strong></div>
       <div class="stat"><span>Accuracy</span><strong id="accuracy">0%</strong></div>
       <div class="stat"><span>Total attempts</span><strong id="totalAttempts">0</strong></div>
@@ -473,10 +515,24 @@
         <section class="grid-panel">
           <div class="question-grid" id="questionGrid"></div>
         </section>
+        <section class="targets">
+          <h3>Grade targets</h3>
+          <table class="target-table">
+            <thead>
+              <tr>
+                <th>Grade</th>
+                <th>Marks</th>
+                <th>Time/mark</th>
+              </tr>
+            </thead>
+            <tbody id="gradeTargets"></tbody>
+          </table>
+        </section>
         <section class="summary" id="summary">
           <h3>End statistics</h3>
           <div class="summary-grid">
             <div class="summary-item"><span>Total time</span><strong id="summaryTotal">00:00</strong></div>
+            <div class="summary-item"><span>Exam time left</span><strong id="summaryTimeLeft">75:00</strong></div>
             <div class="summary-item"><span>Final accuracy</span><strong id="summaryAccuracy">0%</strong></div>
             <div class="summary-item"><span>Total attempts</span><strong id="summaryAttempts">0</strong></div>
             <div class="summary-item"><span>Average attempts</span><strong id="summaryAvgAttempts">0.0</strong></div>
@@ -523,6 +579,14 @@
       { page: 12, from: 25, to: 27 }, { page: 13, from: 28, to: 31 }, { page: 14, from: 32, to: 33 },
       { page: 15, from: 34, to: 35 }, { page: 16, from: 36, to: 38 }, { page: 17, from: 39, to: 40 }
     ];
+    const examDurationMs = 75 * 60 * 1000;
+    const gradeBoundaries = [
+      { grade: "A", marks: 29 },
+      { grade: "B", marks: 25 },
+      { grade: "C", marks: 22 },
+      { grade: "D", marks: 18 },
+      { grade: "E", marks: 15 }
+    ];
 
     const state = {
       current: 1,
@@ -557,6 +621,7 @@
       score: document.getElementById("score")
       , playerName: document.getElementById("playerName")
       , totalTime: document.getElementById("totalTime")
+      , timeLeft: document.getElementById("timeLeft")
       , questionTime: document.getElementById("questionTime")
       , accuracy: document.getElementById("accuracy")
       , totalAttempts: document.getElementById("totalAttempts")
@@ -564,11 +629,13 @@
       , progressFill: document.getElementById("progressFill")
       , summary: document.getElementById("summary")
       , summaryTotal: document.getElementById("summaryTotal")
+      , summaryTimeLeft: document.getElementById("summaryTimeLeft")
       , summaryAccuracy: document.getElementById("summaryAccuracy")
       , summaryAttempts: document.getElementById("summaryAttempts")
       , summaryAvgAttempts: document.getElementById("summaryAvgAttempts")
       , summaryFastest: document.getElementById("summaryFastest")
       , summarySlowest: document.getElementById("summarySlowest")
+      , gradeTargets: document.getElementById("gradeTargets")
       , leaderboardStatus: document.getElementById("leaderboardStatus")
       , leaderboardList: document.getElementById("leaderboardList")
       , refreshLeaderboard: document.getElementById("refreshLeaderboard")
@@ -579,6 +646,13 @@
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function formatPace(ms) {
+      const totalSeconds = Math.max(1, Math.round(ms / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
     }
 
     function enterQuestion(question) {
@@ -830,10 +904,29 @@
 
     function renderTimers() {
       const now = state.finishedAt || Date.now();
-      els.totalTime.textContent = formatTime(now - state.startedAt);
+      const elapsed = now - state.startedAt;
+      const remaining = examDurationMs - elapsed;
+      els.totalTime.textContent = formatTime(elapsed);
+      els.timeLeft.textContent = remaining >= 0 ? formatTime(remaining) : `+${formatTime(Math.abs(remaining))}`;
+      els.timeLeft.style.color = remaining >= 0 ? "" : "var(--bad)";
       const questionStart = state.questionStartedAt[state.current] || now;
       const solvedTime = state.timeSpent[state.current];
       els.questionTime.textContent = formatTime(solvedTime ?? (Date.now() - questionStart));
+    }
+
+    function renderGradeTargets() {
+      els.gradeTargets.innerHTML = "";
+      gradeBoundaries.forEach(({ grade, marks }) => {
+        const row = document.createElement("tr");
+        const gradeCell = document.createElement("td");
+        const marksCell = document.createElement("td");
+        const paceCell = document.createElement("td");
+        gradeCell.textContent = grade;
+        marksCell.textContent = `${marks}/40`;
+        paceCell.textContent = formatPace(examDurationMs / marks);
+        row.append(gradeCell, marksCell, paceCell);
+        els.gradeTargets.appendChild(row);
+      });
     }
 
     function renderSummary() {
@@ -846,7 +939,11 @@
       const solvedEntries = Object.entries(state.timeSpent);
       const fastest = solvedEntries.reduce((best, item) => !best || item[1] < best[1] ? item : best, null);
       const slowest = solvedEntries.reduce((worst, item) => !worst || item[1] > worst[1] ? item : worst, null);
-      els.summaryTotal.textContent = formatTime((state.finishedAt || Date.now()) - state.startedAt);
+      const totalTime = (state.finishedAt || Date.now()) - state.startedAt;
+      const remaining = examDurationMs - totalTime;
+      els.summaryTotal.textContent = formatTime(totalTime);
+      els.summaryTimeLeft.textContent = remaining >= 0 ? formatTime(remaining) : `Over by ${formatTime(Math.abs(remaining))}`;
+      els.summaryTimeLeft.style.color = remaining >= 0 ? "" : "var(--bad)";
       els.summaryAccuracy.textContent = `${Math.round((correctCount / 40) * 100)}%`;
       els.summaryAttempts.textContent = totalAttempts;
       els.summaryAvgAttempts.textContent = (totalAttempts / 40).toFixed(1);
@@ -925,6 +1022,7 @@
     }, 1000);
 
     initLeaderboard();
+    renderGradeTargets();
     render();
   </script>
 </body>
