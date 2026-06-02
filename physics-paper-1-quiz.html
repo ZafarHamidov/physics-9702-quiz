@@ -84,6 +84,17 @@
       border-color: #1c2630;
     }
 
+    .start-panel button.secondary {
+      margin-top: 8px;
+      background: #fff;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+
+    .start-panel button.hidden {
+      display: none;
+    }
+
     header {
       position: sticky;
       top: 0;
@@ -552,8 +563,9 @@
       <p>Enter your leaderboard name, then start the 75-minute Paper 1 practice test.</p>
       <label for="startName">Name</label>
       <input id="startName" maxlength="24" placeholder="Your name">
-      <div class="resume-note" id="resumeNote">Saved progress found. Press Start test to continue from where you left off.</div>
+      <div class="resume-note" id="resumeNote">Saved progress found. Continue it, or start a new test and clear the saved progress.</div>
       <button id="startTest">Start test</button>
+      <button class="secondary hidden" id="startFresh">Start new test</button>
     </div>
   </section>
 
@@ -709,6 +721,7 @@
       startName: document.getElementById("startName"),
       resumeNote: document.getElementById("resumeNote"),
       startTest: document.getElementById("startTest"),
+      startFresh: document.getElementById("startFresh"),
       hint: document.getElementById("hint"),
       options: document.getElementById("options"),
       feedback: document.getElementById("feedback"),
@@ -1283,11 +1296,13 @@
       els.playerName.value = els.startName.value;
     });
 
-    els.startTest.addEventListener("click", () => {
+    function beginTest(forceFresh = false) {
       els.playerName.value = cleanName(els.startName.value);
       els.startName.value = els.playerName.value;
       localStorage.setItem("physics9702PlayerName", els.playerName.value);
-      if (!savedProgressAvailable) {
+      if (forceFresh || !savedProgressAvailable) {
+        localStorage.removeItem(progressKey);
+        savedProgressAvailable = false;
         state.startedAt = Date.now();
         state.current = 1;
         state.attempts = {};
@@ -1305,6 +1320,14 @@
       els.startScreen.style.display = "none";
       render();
       updateLiveSession();
+    }
+
+    els.startTest.addEventListener("click", () => {
+      beginTest(false);
+    });
+
+    els.startFresh.addEventListener("click", () => {
+      beginTest(true);
     });
 
     els.startName.addEventListener("keydown", event => {
@@ -1335,7 +1358,8 @@
     renderLiveSessions([]);
     savedProgressAvailable = loadProgress();
     els.resumeNote.classList.toggle("visible", savedProgressAvailable);
-    els.startTest.textContent = savedProgressAvailable ? "Continue test" : "Start test";
+    els.startTest.textContent = savedProgressAvailable ? "Continue saved test" : "Start test";
+    els.startFresh.classList.toggle("hidden", !savedProgressAvailable);
   </script>
 </body>
 </html>
