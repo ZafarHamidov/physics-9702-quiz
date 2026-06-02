@@ -13,6 +13,15 @@ service cloud.firestore {
         request.resource.data.totalAttempts is number &&
         request.resource.data.totalAttempts >= 40 &&
         request.resource.data.totalAttempts <= 160 &&
+        request.resource.data.firstTryCorrect is number &&
+        request.resource.data.firstTryCorrect >= 0 &&
+        request.resource.data.firstTryCorrect <= 40 &&
+        request.resource.data.eventualCorrect is number &&
+        request.resource.data.eventualCorrect >= 0 &&
+        request.resource.data.eventualCorrect <= 40 &&
+        request.resource.data.incorrect is number &&
+        request.resource.data.incorrect >= 0 &&
+        request.resource.data.incorrect <= 40 &&
         request.resource.data.totalTime is number &&
         request.resource.data.totalTime >= 0 &&
         request.resource.data.totalTime <= 21600000;
@@ -30,6 +39,15 @@ service cloud.firestore {
         request.resource.data.totalAttempts is number &&
         request.resource.data.totalAttempts >= 0 &&
         request.resource.data.totalAttempts <= 160 &&
+        request.resource.data.firstTryCorrect is number &&
+        request.resource.data.firstTryCorrect >= 0 &&
+        request.resource.data.firstTryCorrect <= 40 &&
+        request.resource.data.eventualCorrect is number &&
+        request.resource.data.eventualCorrect >= 0 &&
+        request.resource.data.eventualCorrect <= 40 &&
+        request.resource.data.incorrect is number &&
+        request.resource.data.incorrect >= 0 &&
+        request.resource.data.incorrect <= 40 &&
         request.resource.data.totalTime is number &&
         request.resource.data.totalTime >= 0 &&
         request.resource.data.totalTime <= 21600000 &&
@@ -51,6 +69,15 @@ service cloud.firestore {
         request.resource.data.totalAttempts is number &&
         request.resource.data.totalAttempts >= 0 &&
         request.resource.data.totalAttempts <= 160 &&
+        request.resource.data.firstTryCorrect is number &&
+        request.resource.data.firstTryCorrect >= 0 &&
+        request.resource.data.firstTryCorrect <= 40 &&
+        request.resource.data.eventualCorrect is number &&
+        request.resource.data.eventualCorrect >= 0 &&
+        request.resource.data.eventualCorrect <= 40 &&
+        request.resource.data.incorrect is number &&
+        request.resource.data.incorrect >= 0 &&
+        request.resource.data.incorrect <= 40 &&
         request.resource.data.totalTime is number &&
         request.resource.data.totalTime >= 0 &&
         request.resource.data.totalTime <= 21600000 &&
