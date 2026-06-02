@@ -707,7 +707,26 @@
       finishedAt: null
     };
     const progressKey = "physics9702QuizProgress";
+    const sessionKey = "physics9702SessionId";
     let savedProgressAvailable = false;
+
+    function newSessionId() {
+      return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    }
+
+    function currentSessionId() {
+      const existing = localStorage.getItem(sessionKey);
+      if (existing) return existing;
+      const created = newSessionId();
+      localStorage.setItem(sessionKey, created);
+      return created;
+    }
+
+    function resetSessionId() {
+      const created = newSessionId();
+      localStorage.setItem(sessionKey, created);
+      leaderboard.sessionId = created;
+    }
     const leaderboard = {
       mode: "local",
       db: null,
@@ -715,7 +734,7 @@
       collectionName: window.LEADERBOARD_CONFIG?.collectionName || "physics_9702_w25_11",
       liveCollectionName: window.LEADERBOARD_CONFIG?.liveCollectionName || "physics_9702_w25_11_live",
       participantsCollectionName: window.LEADERBOARD_CONFIG?.participantsCollectionName || "physics_9702_w25_11_participants",
-      sessionId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      sessionId: currentSessionId(),
       liveUnsubscribe: null,
       liveFinished: false,
       submitted: false
@@ -822,7 +841,8 @@
         state.timeSpent = saved.timeSpent || {};
         state.startedAt = Number(saved.startedAt) || Date.now();
         state.finishedAt = saved.finishedAt ? Number(saved.finishedAt) : null;
-        if (saved.sessionId) leaderboard.sessionId = saved.sessionId;
+        leaderboard.sessionId = saved.sessionId || currentSessionId();
+        localStorage.setItem(sessionKey, leaderboard.sessionId);
         leaderboard.submitted = Boolean(saved.submitted);
         leaderboard.liveFinished = Boolean(saved.liveFinished);
         if (saved.name) {
@@ -1356,7 +1376,7 @@
       state.finishedAt = null;
       leaderboard.submitted = false;
       leaderboard.liveFinished = false;
-      leaderboard.sessionId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+      resetSessionId();
       saveProgress();
       document.body.classList.add("prestart");
       els.startScreen.style.display = "";
@@ -1387,7 +1407,7 @@
       if (forceFresh || !savedProgressAvailable) {
         localStorage.removeItem(progressKey);
         savedProgressAvailable = false;
-        leaderboard.sessionId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+        resetSessionId();
         state.startedAt = Date.now();
         state.current = 1;
         state.attempts = {};
