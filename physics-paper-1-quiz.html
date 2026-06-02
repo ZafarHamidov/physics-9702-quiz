@@ -413,6 +413,45 @@
       background: #fff;
     }
 
+    .auth-panel {
+      max-width: 560px;
+    }
+
+    .auth-form {
+      display: grid;
+      gap: 10px;
+      padding: 4px;
+      background: #fff;
+    }
+
+    .auth-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .auth-form button {
+      min-height: 42px;
+      padding: 0 12px;
+    }
+
+    .auth-primary {
+      background: #1c2630;
+      color: #fff;
+      border-color: #1c2630;
+    }
+
+    .auth-message {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    #phoneRecaptcha {
+      min-height: 78px;
+    }
+
     .completion-panel {
       max-width: 720px;
     }
@@ -437,6 +476,9 @@
 
     @media (max-width: 560px) {
       .completion-actions {
+        grid-template-columns: 1fr;
+      }
+      .auth-row {
         grid-template-columns: 1fr;
       }
     }
@@ -717,7 +759,7 @@
       <label for="startName">Name</label>
       <input id="startName" maxlength="24" placeholder="Your name">
       <div class="auth-actions">
-        <button class="secondary" id="startGoogleSignIn">Sign in with Google</button>
+        <button class="secondary" id="startGoogleSignIn">Sign in / sign up</button>
         <div class="auth-status" id="authStatus">Optional: sign in to use your Google name on the leaderboard.</div>
       </div>
       <div class="resume-note" id="resumeNote">Saved progress found. Continue it, or start a new test and clear the saved progress.</div>
@@ -886,6 +928,40 @@
     </div>
   </div>
 
+  <div class="modal" id="authModal" aria-hidden="true">
+    <div class="modal-panel auth-panel">
+      <div class="modal-head">
+        <h3>Sign in or sign up</h3>
+        <button id="closeAuth">Return</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-form">
+          <button class="auth-primary" id="authGoogle">Continue with Google</button>
+          <button id="authAnonymous">Continue anonymously</button>
+          <div class="auth-row">
+            <input id="authEmail" type="email" placeholder="Email">
+            <input id="authPassword" type="password" placeholder="Password">
+          </div>
+          <div class="auth-row">
+            <button id="authEmailSignIn">Sign in with password</button>
+            <button id="authEmailSignUp">Sign up with password</button>
+          </div>
+          <button id="authPasswordless">Send passwordless email link</button>
+          <div class="auth-row">
+            <input id="authPhone" type="tel" placeholder="Phone, e.g. +971501234567">
+            <button id="authPhoneSend">Send phone code</button>
+          </div>
+          <div id="phoneRecaptcha"></div>
+          <div class="auth-row">
+            <input id="authPhoneCode" inputmode="numeric" placeholder="SMS code">
+            <button id="authPhoneConfirm">Confirm phone code</button>
+          </div>
+          <div class="auth-message" id="authMessage">Choose a sign-in method. You can return without signing in.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="leaderboard-config.js"></script>
   <script type="module">
     const answers = {
@@ -983,6 +1059,21 @@
       closeFormula: document.getElementById("closeFormula"),
       completionModal: document.getElementById("completionModal"),
       closeCompletion: document.getElementById("closeCompletion"),
+      authModal: document.getElementById("authModal"),
+      closeAuth: document.getElementById("closeAuth"),
+      authGoogle: document.getElementById("authGoogle"),
+      authAnonymous: document.getElementById("authAnonymous"),
+      authEmail: document.getElementById("authEmail"),
+      authPassword: document.getElementById("authPassword"),
+      authEmailSignIn: document.getElementById("authEmailSignIn"),
+      authEmailSignUp: document.getElementById("authEmailSignUp"),
+      authPasswordless: document.getElementById("authPasswordless"),
+      authPhone: document.getElementById("authPhone"),
+      authPhoneSend: document.getElementById("authPhoneSend"),
+      authPhoneCode: document.getElementById("authPhoneCode"),
+      authPhoneConfirm: document.getElementById("authPhoneConfirm"),
+      phoneRecaptcha: document.getElementById("phoneRecaptcha"),
+      authMessage: document.getElementById("authMessage"),
       completeName: document.getElementById("completeName"),
       completeScore: document.getElementById("completeScore"),
       completeGrade: document.getElementById("completeGrade"),
@@ -1050,6 +1141,16 @@
       document.body.classList.toggle("modal-open", open);
     }
 
+    function setAuthModal(open) {
+      els.authModal.classList.toggle("visible", open);
+      els.authModal.setAttribute("aria-hidden", open ? "false" : "true");
+      document.body.classList.toggle("modal-open", open);
+    }
+
+    function setAuthMessage(message) {
+      els.authMessage.textContent = message;
+    }
+
     function formatTime(ms) {
       const totalSeconds = Math.max(0, Math.floor(ms / 1000));
       const minutes = Math.floor(totalSeconds / 60);
@@ -1101,7 +1202,7 @@
     }
 
     function authName() {
-      return leaderboard.user?.displayName || els.playerName.value;
+      return leaderboard.user?.displayName || leaderboard.user?.email || leaderboard.user?.phoneNumber || els.playerName.value;
     }
 
     function applyAuthUser(user) {
@@ -1111,10 +1212,10 @@
       els.googleSignOut.classList.toggle("hidden", !signedIn);
       els.startGoogleSignIn.classList.toggle("hidden", signedIn);
       els.authStatus.textContent = signedIn
-        ? `Signed in as ${user.displayName || user.email}`
-        : "Optional: sign in to use your Google name on the leaderboard.";
+        ? `Signed in as ${user.isAnonymous ? "anonymous user" : (user.displayName || user.email || user.phoneNumber)}`
+        : "Optional: sign in to use your account name on the leaderboard.";
       if (signedIn) {
-        const name = cleanName(user.displayName || user.email);
+        const name = cleanName(user.displayName || user.email || user.phoneNumber || "Anonymous");
         els.playerName.value = name;
         els.startName.value = name;
         localStorage.setItem("physics9702PlayerName", name);
@@ -1123,6 +1224,7 @@
           updateLiveSession();
           updateParticipant();
         }
+        setAuthModal(false);
       }
     }
 
@@ -1384,6 +1486,7 @@
         leaderboard.db = leaderboard.api.getFirestore(app);
         leaderboard.auth = leaderboard.api.getAuth(app);
         leaderboard.api.onAuthStateChanged(leaderboard.auth, applyAuthUser);
+        completePasswordlessSignIn();
         leaderboard.mode = "public";
         els.leaderboardStatus.textContent = "Public leaderboard connected. Live and completed scores are shared.";
         await loadLeaderboard();
@@ -1914,16 +2017,21 @@
       if (event.key === "Enter") els.startTest.click();
     });
 
-    async function signInWithGoogle() {
+    function authReady() {
       if (!leaderboard.auth || !leaderboard.api) {
-        els.authStatus.textContent = "Google sign-in is not ready yet. Try again in a moment.";
-        return;
+        setAuthMessage("Sign-in is not ready yet. Try again in a moment.");
+        return false;
       }
+      return true;
+    }
+
+    async function signInWithGoogle() {
+      if (!authReady()) return;
       try {
         const provider = new leaderboard.api.GoogleAuthProvider();
         await leaderboard.api.signInWithPopup(leaderboard.auth, provider);
       } catch {
-        els.authStatus.textContent = "Google sign-in failed. Check Firebase Authentication settings.";
+        setAuthMessage("Google sign-in failed. Check Firebase Authentication settings.");
       }
     }
 
@@ -1937,9 +2045,117 @@
       }
     }
 
-    els.startGoogleSignIn.addEventListener("click", signInWithGoogle);
-    els.googleSignIn.addEventListener("click", signInWithGoogle);
+    async function signInWithEmailPassword(createAccount = false) {
+      if (!authReady()) return;
+      const email = els.authEmail.value.trim();
+      const password = els.authPassword.value;
+      if (!email || !password) {
+        setAuthMessage("Enter an email and password.");
+        return;
+      }
+      try {
+        if (createAccount) {
+          await leaderboard.api.createUserWithEmailAndPassword(leaderboard.auth, email, password);
+        } else {
+          await leaderboard.api.signInWithEmailAndPassword(leaderboard.auth, email, password);
+        }
+      } catch (error) {
+        setAuthMessage(error.message || "Email/password sign-in failed.");
+      }
+    }
+
+    async function sendPasswordlessLink() {
+      if (!authReady()) return;
+      const email = els.authEmail.value.trim();
+      if (!email) {
+        setAuthMessage("Enter your email first.");
+        return;
+      }
+      try {
+        await leaderboard.api.sendSignInLinkToEmail(leaderboard.auth, email, {
+          url: window.location.href.split("#")[0],
+          handleCodeInApp: true
+        });
+        localStorage.setItem("physics9702EmailForSignIn", email);
+        setAuthMessage("Passwordless sign-in link sent. Check your email.");
+      } catch (error) {
+        setAuthMessage(error.message || "Could not send passwordless email.");
+      }
+    }
+
+    async function completePasswordlessSignIn() {
+      if (!leaderboard.auth || !leaderboard.api) return;
+      if (!leaderboard.api.isSignInWithEmailLink(leaderboard.auth, window.location.href)) return;
+      const email = localStorage.getItem("physics9702EmailForSignIn") || window.prompt("Enter your email to complete sign-in");
+      if (!email) return;
+      try {
+        await leaderboard.api.signInWithEmailLink(leaderboard.auth, email, window.location.href);
+        localStorage.removeItem("physics9702EmailForSignIn");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch {
+        setAuthMessage("Could not complete passwordless sign-in.");
+      }
+    }
+
+    function ensureRecaptcha() {
+      if (window.physics9702Recaptcha) return window.physics9702Recaptcha;
+      window.physics9702Recaptcha = new leaderboard.api.RecaptchaVerifier(leaderboard.auth, "phoneRecaptcha", {
+        size: "normal"
+      });
+      return window.physics9702Recaptcha;
+    }
+
+    async function sendPhoneCode() {
+      if (!authReady()) return;
+      const phone = els.authPhone.value.trim();
+      if (!phone) {
+        setAuthMessage("Enter a phone number with country code.");
+        return;
+      }
+      try {
+        window.physics9702Confirmation = await leaderboard.api.signInWithPhoneNumber(leaderboard.auth, phone, ensureRecaptcha());
+        setAuthMessage("SMS code sent. Enter it below.");
+      } catch (error) {
+        setAuthMessage(error.message || "Could not send SMS code.");
+      }
+    }
+
+    async function confirmPhoneCode() {
+      const code = els.authPhoneCode.value.trim();
+      if (!window.physics9702Confirmation || !code) {
+        setAuthMessage("Send and enter the SMS code first.");
+        return;
+      }
+      try {
+        await window.physics9702Confirmation.confirm(code);
+      } catch (error) {
+        setAuthMessage(error.message || "Phone confirmation failed.");
+      }
+    }
+
+    async function signInAnonymous() {
+      if (!authReady()) return;
+      try {
+        await leaderboard.api.signInAnonymously(leaderboard.auth);
+      } catch (error) {
+        setAuthMessage(error.message || "Anonymous sign-in failed.");
+      }
+    }
+
+    els.startGoogleSignIn.addEventListener("click", () => setAuthModal(true));
+    els.googleSignIn.addEventListener("click", () => setAuthModal(true));
     els.googleSignOut.addEventListener("click", signOutGoogle);
+    els.closeAuth.addEventListener("click", () => setAuthModal(false));
+    els.authModal.addEventListener("click", event => {
+      if (event.target === els.authModal) setAuthModal(false);
+    });
+    els.authGoogle.addEventListener("click", signInWithGoogle);
+    els.authAnonymous.addEventListener("click", signInAnonymous);
+    els.authEmailSignIn.addEventListener("click", () => signInWithEmailPassword(false));
+    els.authEmailSignUp.addEventListener("click", () => signInWithEmailPassword(true));
+    els.authPasswordless.addEventListener("click", sendPasswordlessLink);
+    els.authPhoneSend.addEventListener("click", sendPhoneCode);
+    els.authPhoneConfirm.addEventListener("click", confirmPhoneCode);
 
     els.refreshLeaderboard.addEventListener("click", () => {
       loadLeaderboard();
@@ -1966,6 +2182,7 @@
       if (event.key === "Escape") {
         setFormulaModal(false);
         setCompletionModal(false);
+        setAuthModal(false);
       }
     });
 
