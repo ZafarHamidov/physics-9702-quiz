@@ -1411,6 +1411,16 @@
       window.open(`${baseUrl}${encodeURIComponent(resultShareText())}`, "_blank", "noopener,noreferrer");
     }
 
+    function openTelegramShare() {
+      const url = "https://zafarhamidov.github.io/physics-9702-quiz/";
+      const text = resultShareText().replace(`\n\nQuiz: ${url}`, "");
+      window.open(
+        `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    }
+
     function liveSnapshot() {
       return {
         ...scoreSnapshot(),
@@ -2166,7 +2176,7 @@
     els.copyResults.addEventListener("click", copyResults);
     els.shareResults.addEventListener("click", shareResults);
     els.shareWhatsApp.addEventListener("click", () => openShareUrl("https://wa.me/?text="));
-    els.shareTelegram.addEventListener("click", () => openShareUrl("https://t.me/share/url?text="));
+    els.shareTelegram.addEventListener("click", openTelegramShare);
     window.addEventListener("keydown", event => {
       if (event.key === "Escape") {
         setFormulaModal(false);
