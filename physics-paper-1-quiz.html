@@ -27,6 +27,47 @@
       color: var(--ink);
     }
 
+    body.prestart header,
+    body.prestart main {
+      display: none;
+    }
+
+    .start-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: #eef4f8;
+    }
+
+    .start-panel {
+      width: min(440px, 100%);
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .start-panel h1 {
+      margin-bottom: 8px;
+      font-size: 28px;
+    }
+
+    .start-panel p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .start-panel button {
+      width: 100%;
+      margin-top: 14px;
+      background: #1c2630;
+      color: #fff;
+      border-color: #1c2630;
+    }
+
     header {
       position: sticky;
       top: 0;
@@ -471,7 +512,17 @@
     }
   </style>
 </head>
-<body>
+<body class="prestart">
+  <section class="start-screen" id="startScreen">
+    <div class="start-panel">
+      <h1>Physics 9702/11 Quiz</h1>
+      <p>Enter your leaderboard name, then start the 75-minute Paper 1 practice test.</p>
+      <label for="startName">Name</label>
+      <input id="startName" maxlength="24" placeholder="Your name">
+      <button id="startTest">Start test</button>
+    </div>
+  </section>
+
   <header>
     <div class="bar">
       <div>
@@ -595,7 +646,7 @@
       questionStartedAt: {},
       timeSpent: {},
       advanceTimer: null,
-      startedAt: Date.now(),
+      startedAt: null,
       finishedAt: null
     };
     const leaderboard = {
@@ -607,6 +658,9 @@
     };
     const els = {
       title: document.getElementById("questionTitle"),
+      startScreen: document.getElementById("startScreen"),
+      startName: document.getElementById("startName"),
+      startTest: document.getElementById("startTest"),
       hint: document.getElementById("hint"),
       options: document.getElementById("options"),
       feedback: document.getElementById("feedback"),
@@ -672,7 +726,7 @@
     function scoreSnapshot() {
       const correctCount = solvedQuestions().length;
       const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
-      const totalTime = (state.finishedAt || Date.now()) - state.startedAt;
+      const totalTime = (state.finishedAt || Date.now()) - (state.startedAt || Date.now());
       const solvedTimes = Object.values(state.timeSpent);
       const avgTime = solvedTimes.length
         ? solvedTimes.reduce((sum, time) => sum + time, 0) / solvedTimes.length
@@ -903,8 +957,16 @@
     }
 
     function renderTimers() {
+      if (!state.startedAt) {
+        els.totalTime.textContent = "00:00";
+        els.timeLeft.textContent = "75:00";
+        els.timeLeft.style.color = "";
+        els.questionTime.textContent = "00:00";
+        return;
+      }
+      const startedAt = state.startedAt || Date.now();
       const now = state.finishedAt || Date.now();
-      const elapsed = now - state.startedAt;
+      const elapsed = now - startedAt;
       const remaining = examDurationMs - elapsed;
       els.totalTime.textContent = formatTime(elapsed);
       els.timeLeft.textContent = remaining >= 0 ? formatTime(remaining) : `+${formatTime(Math.abs(remaining))}`;
@@ -953,6 +1015,7 @@
     }
 
     function render() {
+      if (!state.startedAt) return;
       const page = pageFor(state.current);
       enterQuestion(state.current);
       els.title.textContent = `Question ${state.current}`;
@@ -1002,16 +1065,43 @@
       state.questionStartedAt = {};
       state.timeSpent = {};
       state.advanceTimer = null;
-      state.startedAt = Date.now();
+      state.startedAt = null;
       state.finishedAt = null;
       leaderboard.submitted = false;
-      enterQuestion(1);
-      render();
+      document.body.classList.add("prestart");
+      els.startScreen.style.display = "";
+      els.startName.value = els.playerName.value;
+      renderScore();
+      renderTimers();
+      renderLeaderboard(localEntries());
     });
 
     els.playerName.value = localStorage.getItem("physics9702PlayerName") || "";
+    els.startName.value = els.playerName.value;
     els.playerName.addEventListener("input", () => {
       localStorage.setItem("physics9702PlayerName", cleanName(els.playerName.value));
+      els.startName.value = els.playerName.value;
+    });
+
+    els.startName.addEventListener("input", () => {
+      localStorage.setItem("physics9702PlayerName", cleanName(els.startName.value));
+      els.playerName.value = els.startName.value;
+    });
+
+    els.startTest.addEventListener("click", () => {
+      if (state.startedAt) return;
+      els.playerName.value = cleanName(els.startName.value);
+      els.startName.value = els.playerName.value;
+      localStorage.setItem("physics9702PlayerName", els.playerName.value);
+      state.startedAt = Date.now();
+      enterQuestion(1);
+      document.body.classList.remove("prestart");
+      els.startScreen.style.display = "none";
+      render();
+    });
+
+    els.startName.addEventListener("keydown", event => {
+      if (event.key === "Enter") els.startTest.click();
     });
 
     els.refreshLeaderboard.addEventListener("click", () => loadLeaderboard());
@@ -1023,7 +1113,8 @@
 
     initLeaderboard();
     renderGradeTargets();
-    render();
+    renderScore();
+    renderTimers();
   </script>
 </body>
 </html>
