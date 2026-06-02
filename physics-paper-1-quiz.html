@@ -1468,6 +1468,9 @@
         leaderboard.db = leaderboard.api.getFirestore(app);
         leaderboard.auth = leaderboard.api.getAuth(app);
         leaderboard.api.onAuthStateChanged(leaderboard.auth, applyAuthUser);
+        leaderboard.api.getRedirectResult(leaderboard.auth).catch(error => {
+          setAuthMessage(error.message || "Could not complete Google sign-in.");
+        });
         completePasswordlessSignIn();
         leaderboard.mode = "public";
         els.leaderboardStatus.textContent = "Public leaderboard connected. Live and completed scores are shared.";
@@ -2011,9 +2014,10 @@
       if (!authReady()) return;
       try {
         const provider = new leaderboard.api.GoogleAuthProvider();
-        await leaderboard.api.signInWithPopup(leaderboard.auth, provider);
-      } catch {
-        setAuthMessage("Google sign-in failed. Check Firebase Authentication settings.");
+        setAuthMessage("Redirecting to Google sign-in...");
+        await leaderboard.api.signInWithRedirect(leaderboard.auth, provider);
+      } catch (error) {
+        setAuthMessage(error.message || "Google sign-in failed. Check Firebase Authentication settings.");
       }
     }
 

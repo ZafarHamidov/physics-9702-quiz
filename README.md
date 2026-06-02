@@ -37,7 +37,7 @@ The quiz supports Google, email/password, passwordless email link, phone, and an
 7. Enable Phone.
 8. Enable Anonymous.
 9. Set a support email and save.
-10. In Authentication > Settings > Authorized domains, make sure `zafarhamidov.github.io` is allowed.
+10. In Authentication > Settings > Authorized domains, make sure `zafarhamidov.github.io` is allowed. Google sign-in uses redirect mode, so this domain must be authorized.
 
 The quiz uses the signed-in user's display name, email, or phone number as the leaderboard name. It stores the Firebase user ID with scores, but does not display email addresses in the public leaderboard.
 
