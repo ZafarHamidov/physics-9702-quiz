@@ -384,6 +384,34 @@
       background: #fff;
     }
 
+    .completion-panel {
+      max-width: 720px;
+    }
+
+    .completion-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .completion-actions input {
+      min-height: 44px;
+    }
+
+    .completion-actions button {
+      padding: 0 14px;
+      background: #1c2630;
+      color: #fff;
+      border-color: #1c2630;
+    }
+
+    @media (max-width: 560px) {
+      .completion-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .grid-panel {
       margin-top: 14px;
       padding: 12px;
@@ -786,6 +814,31 @@
     </div>
   </div>
 
+  <div class="modal" id="completionModal" aria-hidden="true">
+    <div class="modal-panel completion-panel">
+      <div class="modal-head">
+        <h3>Test complete</h3>
+        <button id="closeCompletion">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="summary-grid">
+          <div class="summary-item"><span>Name</span><strong id="completeName">--</strong></div>
+          <div class="summary-item"><span>Score</span><strong id="completeScore">0/40</strong></div>
+          <div class="summary-item"><span>Total time</span><strong id="completeTotal">00:00</strong></div>
+          <div class="summary-item"><span>Exam time left</span><strong id="completeTimeLeft">75:00</strong></div>
+          <div class="summary-item"><span>Total attempts</span><strong id="completeAttempts">0</strong></div>
+          <div class="summary-item"><span>Average attempts</span><strong id="completeAvgAttempts">0.0</strong></div>
+          <div class="summary-item"><span>Fastest solved</span><strong id="completeFastest">--</strong></div>
+          <div class="summary-item"><span>Slowest solved</span><strong id="completeSlowest">--</strong></div>
+        </div>
+        <div class="completion-actions">
+          <input id="resultEmail" type="email" placeholder="Email address">
+          <button id="emailResults">Email results</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="leaderboard-config.js"></script>
   <script type="module">
     const answers = {
@@ -825,6 +878,7 @@
     const progressKey = "physics9702QuizProgress";
     const sessionKey = "physics9702SessionId";
     let savedProgressAvailable = false;
+    let completionShown = false;
 
     function newSessionId() {
       return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -872,6 +926,18 @@
       formulaButton: document.getElementById("formulaButton"),
       formulaModal: document.getElementById("formulaModal"),
       closeFormula: document.getElementById("closeFormula"),
+      completionModal: document.getElementById("completionModal"),
+      closeCompletion: document.getElementById("closeCompletion"),
+      completeName: document.getElementById("completeName"),
+      completeScore: document.getElementById("completeScore"),
+      completeTotal: document.getElementById("completeTotal"),
+      completeTimeLeft: document.getElementById("completeTimeLeft"),
+      completeAttempts: document.getElementById("completeAttempts"),
+      completeAvgAttempts: document.getElementById("completeAvgAttempts"),
+      completeFastest: document.getElementById("completeFastest"),
+      completeSlowest: document.getElementById("completeSlowest"),
+      resultEmail: document.getElementById("resultEmail"),
+      emailResults: document.getElementById("emailResults"),
       grid: document.getElementById("questionGrid"),
       page: document.getElementById("paperPage"),
       pageLabel: document.getElementById("pageLabel"),
@@ -912,6 +978,12 @@
     function setFormulaModal(open) {
       els.formulaModal.classList.toggle("visible", open);
       els.formulaModal.setAttribute("aria-hidden", open ? "false" : "true");
+      document.body.classList.toggle("modal-open", open);
+    }
+
+    function setCompletionModal(open) {
+      els.completionModal.classList.toggle("visible", open);
+      els.completionModal.setAttribute("aria-hidden", open ? "false" : "true");
       document.body.classList.toggle("modal-open", open);
     }
 
@@ -959,6 +1031,7 @@
         submitted: leaderboard.submitted,
         liveFinished: leaderboard.liveFinished,
         sessionId: leaderboard.sessionId,
+        completionShown,
         name: els.playerName.value
       }));
     }
@@ -978,6 +1051,7 @@
         localStorage.setItem(sessionKey, leaderboard.sessionId);
         leaderboard.submitted = Boolean(saved.submitted);
         leaderboard.liveFinished = Boolean(saved.liveFinished);
+        completionShown = Boolean(saved.completionShown);
         if (saved.name) {
           els.playerName.value = saved.name;
           els.startName.value = saved.name;
@@ -1009,6 +1083,68 @@
         completed: correctCount === 40,
         date: new Date().toISOString()
       };
+    }
+
+    function resultSummary() {
+      const correctCount = solvedQuestions().length;
+      const totalAttempts = Object.values(state.attempts).reduce((sum, choices) => sum + choices.length, 0);
+      const solvedEntries = Object.entries(state.timeSpent);
+      const fastest = solvedEntries.reduce((best, item) => !best || item[1] < best[1] ? item : best, null);
+      const slowest = solvedEntries.reduce((worst, item) => !worst || item[1] > worst[1] ? item : worst, null);
+      const totalTime = (state.finishedAt || Date.now()) - state.startedAt;
+      const remaining = examDurationMs - totalTime;
+      return {
+        name: cleanName(els.playerName.value),
+        correctCount,
+        totalAttempts,
+        totalTime,
+        remaining,
+        avgAttempts: totalAttempts / 40,
+        fastest,
+        slowest
+      };
+    }
+
+    function renderCompletion() {
+      const summary = resultSummary();
+      els.completeName.textContent = summary.name;
+      els.completeScore.textContent = `${summary.correctCount}/40`;
+      els.completeTotal.textContent = formatTime(summary.totalTime);
+      els.completeTimeLeft.textContent = summary.remaining >= 0 ? formatTime(summary.remaining) : `Over by ${formatTime(Math.abs(summary.remaining))}`;
+      els.completeTimeLeft.style.color = summary.remaining >= 0 ? "" : "var(--bad)";
+      els.completeAttempts.textContent = summary.totalAttempts;
+      els.completeAvgAttempts.textContent = summary.avgAttempts.toFixed(1);
+      els.completeFastest.textContent = summary.fastest ? `Q${summary.fastest[0]} (${formatTime(summary.fastest[1])})` : "--";
+      els.completeSlowest.textContent = summary.slowest ? `Q${summary.slowest[0]} (${formatTime(summary.slowest[1])})` : "--";
+    }
+
+    function resultEmailBody() {
+      const summary = resultSummary();
+      return [
+        "Physics 9702/11 Quiz Results",
+        "",
+        `Name: ${summary.name}`,
+        `Score: ${summary.correctCount}/40`,
+        `Total time: ${formatTime(summary.totalTime)}`,
+        `Exam time left: ${summary.remaining >= 0 ? formatTime(summary.remaining) : `Over by ${formatTime(Math.abs(summary.remaining))}`}`,
+        `Total attempts: ${summary.totalAttempts}`,
+        `Average attempts per question: ${summary.avgAttempts.toFixed(1)}`,
+        `Fastest solved: ${summary.fastest ? `Q${summary.fastest[0]} (${formatTime(summary.fastest[1])})` : "--"}`,
+        `Slowest solved: ${summary.slowest ? `Q${summary.slowest[0]} (${formatTime(summary.slowest[1])})` : "--"}`,
+        "",
+        "Quiz: https://zafarhamidov.github.io/physics-9702-quiz/"
+      ].join("\n");
+    }
+
+    function emailResults() {
+      const email = els.resultEmail.value.trim();
+      if (!email) {
+        els.resultEmail.focus();
+        return;
+      }
+      const subject = encodeURIComponent("Physics 9702/11 Quiz Results");
+      const body = encodeURIComponent(resultEmailBody());
+      window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
     }
 
     function liveSnapshot() {
@@ -1454,6 +1590,11 @@
       els.summarySlowest.textContent = slowest ? `Q${slowest[0]} (${formatTime(slowest[1])})` : "--";
       submitLeaderboard();
       finishLiveSession();
+      renderCompletion();
+      if (!completionShown) {
+        completionShown = true;
+        setCompletionModal(true);
+      }
     }
 
     function render() {
@@ -1514,6 +1655,7 @@
       state.finishedAt = null;
       leaderboard.submitted = false;
       leaderboard.liveFinished = false;
+      completionShown = false;
       resetSessionId();
       saveProgress();
       document.body.classList.add("prestart");
@@ -1555,6 +1697,7 @@
         state.finishedAt = null;
         leaderboard.submitted = false;
         leaderboard.liveFinished = false;
+        completionShown = false;
       }
       leaderboard.liveFinished = false;
       enterQuestion(state.current);
@@ -1594,8 +1737,16 @@
     els.formulaModal.addEventListener("click", event => {
       if (event.target === els.formulaModal) setFormulaModal(false);
     });
+    els.closeCompletion.addEventListener("click", () => setCompletionModal(false));
+    els.completionModal.addEventListener("click", event => {
+      if (event.target === els.completionModal) setCompletionModal(false);
+    });
+    els.emailResults.addEventListener("click", emailResults);
     window.addEventListener("keydown", event => {
-      if (event.key === "Escape") setFormulaModal(false);
+      if (event.key === "Escape") {
+        setFormulaModal(false);
+        setCompletionModal(false);
+      }
     });
 
     setInterval(() => {
