@@ -423,6 +423,16 @@
       margin-top: 10px;
     }
 
+    .leaderboard-section {
+      margin-top: 12px;
+    }
+
+    .leaderboard-section h4 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
     .leaderboard-row {
       display: grid;
       grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -603,16 +613,15 @@
             <h3>Leaderboard</h3>
             <button id="refreshLeaderboard">Refresh</button>
           </div>
-          <div class="leaderboard-status" id="leaderboardStatus">Local leaderboard. Add Firebase config to make it public.</div>
-          <div class="leaderboard-list" id="leaderboardList"></div>
-        </section>
-        <section class="leaderboard">
-          <div class="leaderboard-head">
-            <h3><span class="live-dot"></span>Live now</h3>
-            <button id="refreshLive">Refresh</button>
+          <div class="leaderboard-status" id="leaderboardStatus">Local leaderboard. Add Firebase config to share live and completed scores.</div>
+          <div class="leaderboard-section">
+            <h4><span class="live-dot"></span>Live now</h4>
+            <div class="leaderboard-list" id="liveList"></div>
           </div>
-          <div class="leaderboard-status" id="liveStatus">Live sessions appear here while people are taking the quiz.</div>
-          <div class="leaderboard-list" id="liveList"></div>
+          <div class="leaderboard-section">
+            <h4>Completed scores</h4>
+            <div class="leaderboard-list" id="leaderboardList"></div>
+          </div>
         </section>
       </aside>
 
@@ -712,9 +721,7 @@
       , leaderboardStatus: document.getElementById("leaderboardStatus")
       , leaderboardList: document.getElementById("leaderboardList")
       , refreshLeaderboard: document.getElementById("refreshLeaderboard")
-      , liveStatus: document.getElementById("liveStatus")
       , liveList: document.getElementById("liveList")
-      , refreshLive: document.getElementById("refreshLive")
     };
 
     function formatTime(ms) {
@@ -802,7 +809,7 @@
       const config = window.LEADERBOARD_CONFIG?.firebaseConfig;
       if (!config?.apiKey || !config?.projectId) {
         leaderboard.mode = "local";
-        els.leaderboardStatus.textContent = "Local leaderboard. Add Firebase config to make it public for friends.";
+        els.leaderboardStatus.textContent = "Local only: other people will not appear until Firebase is configured in leaderboard-config.js.";
         renderLeaderboard(localEntries());
         return;
       }
@@ -813,7 +820,7 @@
         const app = leaderboard.api.initializeApp(config);
         leaderboard.db = leaderboard.api.getFirestore(app);
         leaderboard.mode = "public";
-        els.leaderboardStatus.textContent = "Public leaderboard connected.";
+        els.leaderboardStatus.textContent = "Public leaderboard connected. Live and completed scores are shared.";
         await loadLeaderboard();
         subscribeLiveSessions();
       } catch {
@@ -837,7 +844,7 @@
           }
         );
       } catch {
-        els.liveStatus.textContent = "Could not update public live session. Showing local live status.";
+        els.leaderboardStatus.textContent = "Could not update public live session. Showing local live status.";
         renderLiveSessions([entry]);
       }
     }
@@ -868,20 +875,17 @@
             renderLiveSessions(entries);
           },
           () => {
-            els.liveStatus.textContent = "Live public updates are unavailable right now.";
+            els.leaderboardStatus.textContent = "Live public updates are unavailable right now.";
           }
         );
       } catch {
-        els.liveStatus.textContent = "Live public updates are unavailable right now.";
+        els.leaderboardStatus.textContent = "Live public updates are unavailable right now.";
       }
     }
 
     function renderLiveSessions(entries) {
       const ranked = rankEntries(entries).filter(entry => entry.started && !entry.finished);
       els.liveList.innerHTML = "";
-      els.liveStatus.textContent = leaderboard.mode === "public"
-        ? "Showing active sessions from the last 2 minutes."
-        : "Local preview only until Firebase is configured.";
       if (!ranked.length) {
         const empty = document.createElement("div");
         empty.className = "leaderboard-status";
@@ -1229,8 +1233,8 @@
       if (event.key === "Enter") els.startTest.click();
     });
 
-    els.refreshLeaderboard.addEventListener("click", () => loadLeaderboard());
-    els.refreshLive.addEventListener("click", () => {
+    els.refreshLeaderboard.addEventListener("click", () => {
+      loadLeaderboard();
       if (state.startedAt) updateLiveSession();
       if (leaderboard.mode !== "public") renderLiveSessions(state.startedAt ? [liveSnapshot()] : []);
     });
