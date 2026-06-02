@@ -458,13 +458,9 @@
 
     .completion-actions {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       margin-top: 14px;
-    }
-
-    .completion-actions input {
-      min-height: 44px;
     }
 
     .completion-actions button {
@@ -921,8 +917,10 @@
           <div class="summary-item"><span>Slowest solved</span><strong id="completeSlowest">--</strong></div>
         </div>
         <div class="completion-actions">
-          <input id="resultEmail" type="email" placeholder="Email address">
-          <button id="emailResults">Email results</button>
+          <button id="copyResults">Copy results</button>
+          <button id="shareResults">Share results</button>
+          <button id="shareWhatsApp">WhatsApp</button>
+          <button id="shareTelegram">Telegram</button>
         </div>
       </div>
     </div>
@@ -1029,7 +1027,6 @@
       collectionName: window.LEADERBOARD_CONFIG?.collectionName || "physics_9702_w25_11",
       liveCollectionName: window.LEADERBOARD_CONFIG?.liveCollectionName || "physics_9702_w25_11_live",
       participantsCollectionName: window.LEADERBOARD_CONFIG?.participantsCollectionName || "physics_9702_w25_11_participants",
-      mailCollectionName: window.LEADERBOARD_CONFIG?.mailCollectionName || "mail",
       sessionId: currentSessionId(),
       liveUnsubscribe: null,
       liveFinished: false,
@@ -1090,8 +1087,10 @@
       completeIncorrect: document.getElementById("completeIncorrect"),
       completeFastest: document.getElementById("completeFastest"),
       completeSlowest: document.getElementById("completeSlowest"),
-      resultEmail: document.getElementById("resultEmail"),
-      emailResults: document.getElementById("emailResults"),
+      copyResults: document.getElementById("copyResults"),
+      shareResults: document.getElementById("shareResults"),
+      shareWhatsApp: document.getElementById("shareWhatsApp"),
+      shareTelegram: document.getElementById("shareTelegram"),
       grid: document.getElementById("questionGrid"),
       page: document.getElementById("paperPage"),
       pageLabel: document.getElementById("pageLabel"),
@@ -1358,7 +1357,7 @@
       els.resultsToggle.classList.add("visible");
     }
 
-    function resultEmailBody() {
+    function resultShareText() {
       const summary = resultSummary();
       return [
         "Physics 9702/11 Quiz Results",
@@ -1384,49 +1383,32 @@
       ].join("\n");
     }
 
-    function resultEmailHtml() {
-      const body = resultEmailBody()
-        .split("\n")
-        .map(line => line ? line.replace(/[&<>"']/g, char => ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          "\"": "&quot;",
-          "'": "&#039;"
-        }[char])) : "&nbsp;")
-        .join("<br>");
-      return `<p>${body}</p>`;
+    async function copyResults() {
+      try {
+        await navigator.clipboard.writeText(resultShareText());
+        els.copyResults.textContent = "Copied";
+      } catch {
+        els.copyResults.textContent = "Copy failed";
+      }
+      setTimeout(() => {
+        els.copyResults.textContent = "Copy results";
+      }, 1800);
     }
 
-    async function emailResults() {
-      const email = els.resultEmail.value.trim();
-      if (!email) {
-        els.resultEmail.focus();
-        return;
-      }
-      els.emailResults.disabled = true;
-      els.emailResults.textContent = "Sending...";
-      try {
-        if (leaderboard.mode !== "public" || !leaderboard.db) {
-          throw new Error("Email service is not connected yet.");
-        }
-        await leaderboard.api.addDoc(leaderboard.api.collection(leaderboard.db, leaderboard.mailCollectionName), {
-          to: email,
-          message: {
-            subject: "Physics 9702/11 Quiz Results",
-            text: resultEmailBody(),
-            html: resultEmailHtml()
-          },
-          createdAt: leaderboard.api.serverTimestamp()
+    async function shareResults() {
+      const text = resultShareText();
+      if (navigator.share) {
+        await navigator.share({
+          title: "Physics 9702/11 Quiz Results",
+          text
         });
-        els.emailResults.textContent = "Sent";
-      } catch {
-        els.emailResults.textContent = "Email unavailable";
-        setTimeout(() => {
-          els.emailResults.disabled = false;
-          els.emailResults.textContent = "Email results";
-        }, 2000);
+      } else {
+        await copyResults();
       }
+    }
+
+    function openShareUrl(baseUrl) {
+      window.open(`${baseUrl}${encodeURIComponent(resultShareText())}`, "_blank", "noopener,noreferrer");
     }
 
     function liveSnapshot() {
@@ -2177,7 +2159,10 @@
     els.completionModal.addEventListener("click", event => {
       if (event.target === els.completionModal) setCompletionModal(false);
     });
-    els.emailResults.addEventListener("click", emailResults);
+    els.copyResults.addEventListener("click", copyResults);
+    els.shareResults.addEventListener("click", shareResults);
+    els.shareWhatsApp.addEventListener("click", () => openShareUrl("https://wa.me/?text="));
+    els.shareTelegram.addEventListener("click", () => openShareUrl("https://t.me/share/url?text="));
     window.addEventListener("keydown", event => {
       if (event.key === "Escape") {
         setFormulaModal(false);
