@@ -60,6 +60,22 @@
       line-height: 1.45;
     }
 
+    .resume-note {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #b7d3ec;
+      border-radius: 8px;
+      background: #eef7ff;
+      color: #24527a;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .resume-note.visible {
+      display: block;
+    }
+
     .start-panel button {
       width: 100%;
       margin-top: 14px;
@@ -536,6 +552,7 @@
       <p>Enter your leaderboard name, then start the 75-minute Paper 1 practice test.</p>
       <label for="startName">Name</label>
       <input id="startName" maxlength="24" placeholder="Your name">
+      <div class="resume-note" id="resumeNote">Saved progress found. Press Start test to continue from where you left off.</div>
       <button id="startTest">Start test</button>
     </div>
   </section>
@@ -673,6 +690,8 @@
       startedAt: null,
       finishedAt: null
     };
+    const progressKey = "physics9702QuizProgress";
+    let savedProgressAvailable = false;
     const leaderboard = {
       mode: "local",
       db: null,
@@ -688,6 +707,7 @@
       title: document.getElementById("questionTitle"),
       startScreen: document.getElementById("startScreen"),
       startName: document.getElementById("startName"),
+      resumeNote: document.getElementById("resumeNote"),
       startTest: document.getElementById("startTest"),
       hint: document.getElementById("hint"),
       options: document.getElementById("options"),
@@ -750,6 +770,50 @@
 
     function cleanName(name) {
       return (name || "Anonymous").trim().replace(/\s+/g, " ").slice(0, 24) || "Anonymous";
+    }
+
+    function saveProgress() {
+      if (!state.startedAt) {
+        localStorage.removeItem(progressKey);
+        return;
+      }
+      localStorage.setItem(progressKey, JSON.stringify({
+        current: state.current,
+        attempts: state.attempts,
+        solvedAt: state.solvedAt,
+        questionStartedAt: state.questionStartedAt,
+        timeSpent: state.timeSpent,
+        startedAt: state.startedAt,
+        finishedAt: state.finishedAt,
+        submitted: leaderboard.submitted,
+        liveFinished: leaderboard.liveFinished,
+        name: els.playerName.value
+      }));
+    }
+
+    function loadProgress() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(progressKey) || "null");
+        if (!saved?.startedAt) return false;
+        state.current = Math.min(40, Math.max(1, Number(saved.current) || 1));
+        state.attempts = saved.attempts || {};
+        state.solvedAt = saved.solvedAt || {};
+        state.questionStartedAt = saved.questionStartedAt || {};
+        state.timeSpent = saved.timeSpent || {};
+        state.startedAt = Number(saved.startedAt) || Date.now();
+        state.finishedAt = saved.finishedAt ? Number(saved.finishedAt) : null;
+        leaderboard.submitted = Boolean(saved.submitted);
+        leaderboard.liveFinished = Boolean(saved.liveFinished);
+        if (saved.name) {
+          els.playerName.value = saved.name;
+          els.startName.value = saved.name;
+          localStorage.setItem("physics9702PlayerName", saved.name);
+        }
+        return true;
+      } catch {
+        localStorage.removeItem(progressKey);
+        return false;
+      }
     }
 
     function scoreSnapshot() {
@@ -1017,6 +1081,8 @@
         state.advanceTimer = setTimeout(() => {
           if (state.current === question) {
             state.current += 1;
+            enterQuestion(state.current);
+            saveProgress();
             render();
           }
         }, 650);
@@ -1156,6 +1222,7 @@
       renderTimers();
       renderSummary();
       updateLiveSession();
+      saveProgress();
     }
 
     els.prev.addEventListener("click", () => {
@@ -1194,6 +1261,7 @@
       state.finishedAt = null;
       leaderboard.submitted = false;
       leaderboard.liveFinished = false;
+      saveProgress();
       document.body.classList.add("prestart");
       els.startScreen.style.display = "";
       els.startName.value = els.playerName.value;
@@ -1220,9 +1288,20 @@
       els.playerName.value = cleanName(els.startName.value);
       els.startName.value = els.playerName.value;
       localStorage.setItem("physics9702PlayerName", els.playerName.value);
-      state.startedAt = Date.now();
+      if (!savedProgressAvailable) {
+        state.startedAt = Date.now();
+        state.current = 1;
+        state.attempts = {};
+        state.solvedAt = {};
+        state.questionStartedAt = {};
+        state.timeSpent = {};
+        state.finishedAt = null;
+        leaderboard.submitted = false;
+        leaderboard.liveFinished = false;
+      }
       leaderboard.liveFinished = false;
-      enterQuestion(1);
+      enterQuestion(state.current);
+      saveProgress();
       document.body.classList.remove("prestart");
       els.startScreen.style.display = "none";
       render();
@@ -1243,13 +1322,20 @@
       renderTimers();
       renderSummary();
       updateLiveSession();
+      saveProgress();
     }, 1000);
+
+    window.addEventListener("beforeunload", () => {
+      saveProgress();
+    });
 
     initLeaderboard();
     renderGradeTargets();
     renderScore();
     renderTimers();
     renderLiveSessions([]);
+    savedProgressAvailable = loadProgress();
+    els.resumeNote.classList.toggle("visible", savedProgressAvailable);
   </script>
 </body>
 </html>
