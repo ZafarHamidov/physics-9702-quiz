@@ -1,6 +1,8 @@
-# Physics 9702/11 Quiz
+# PaperPilot
 
-Single-page quiz for CAIE Physics 9702/11 October/November 2025.
+PaperPilot is a browser-based exam practice app for digitising Cambridge A Level papers so students can practise from any device, keep honest first-attempt scores, and track progress over time.
+
+This first version contains CAIE Physics 9702/11 October/November 2025.
 
 ## Public and live leaderboard
 
