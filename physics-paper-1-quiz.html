@@ -158,6 +158,19 @@
       font-size: 12px;
     }
 
+    .results-toggle {
+      display: none;
+      min-height: 34px;
+      padding: 0 10px;
+      font-size: 12px;
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .results-toggle.visible {
+      display: inline-block;
+    }
+
     .stats-strip {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -701,6 +714,7 @@
         <span>Answered <strong id="answered">0</strong>/40</span>
         <span>|</span>
         <span>Score <strong id="score">0</strong></span>
+        <button class="results-toggle" id="resultsToggle">Results</button>
         <button class="stats-toggle" id="statsToggle">Hide stats</button>
       </div>
     </div>
@@ -924,6 +938,7 @@
       startTest: document.getElementById("startTest"),
       startFresh: document.getElementById("startFresh"),
       statsToggle: document.getElementById("statsToggle"),
+      resultsToggle: document.getElementById("resultsToggle"),
       hint: document.getElementById("hint"),
       options: document.getElementById("options"),
       feedback: document.getElementById("feedback"),
@@ -1070,12 +1085,16 @@
         leaderboard.submitted = Boolean(saved.submitted);
         leaderboard.liveFinished = Boolean(saved.liveFinished);
         completionShown = Boolean(saved.completionShown);
-        if (saved.name) {
-          els.playerName.value = saved.name;
-          els.startName.value = saved.name;
-          localStorage.setItem("physics9702PlayerName", saved.name);
-        }
-        return true;
+      if (saved.name) {
+        els.playerName.value = saved.name;
+        els.startName.value = saved.name;
+        localStorage.setItem("physics9702PlayerName", saved.name);
+      }
+      if (solvedQuestions().length === 40) {
+        renderCompletion();
+        els.resultsToggle.classList.add("visible");
+      }
+      return true;
       } catch {
         localStorage.removeItem(progressKey);
         return false;
@@ -1148,6 +1167,7 @@
       els.completeFirstTry.textContent = summary.firstTryCorrect;
       els.completeFastest.textContent = summary.fastest ? `Q${summary.fastest[0]} (${formatTime(summary.fastest[1])})` : "--";
       els.completeSlowest.textContent = summary.slowest ? `Q${summary.slowest[0]} (${formatTime(summary.slowest[1])})` : "--";
+      els.resultsToggle.classList.add("visible");
     }
 
     function resultEmailBody() {
@@ -1728,6 +1748,7 @@
       leaderboard.submitted = false;
       leaderboard.liveFinished = false;
       completionShown = false;
+      els.resultsToggle.classList.remove("visible");
       resetSessionId();
       saveProgress();
       document.body.classList.add("prestart");
@@ -1770,6 +1791,7 @@
         leaderboard.submitted = false;
         leaderboard.liveFinished = false;
         completionShown = false;
+        els.resultsToggle.classList.remove("visible");
       }
       leaderboard.liveFinished = false;
       enterQuestion(state.current);
@@ -1780,6 +1802,11 @@
       updateLiveSession();
       updateParticipant();
     }
+
+    els.resultsToggle.addEventListener("click", () => {
+      renderCompletion();
+      setCompletionModal(true);
+    });
 
     els.startTest.addEventListener("click", () => {
       beginTest(false);
